@@ -1,0 +1,64 @@
+name: pacjentwybiera
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    ports:
+      - "8000:8000"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      chroma:
+        condition: service_healthy
+    volumes:
+      - .:/app
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'python -c "import urllib.request; urllib.request.urlopen(''http://localhost:8000/'', timeout=2)"',
+        ]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+
+  mongodb:
+    image: mongo:7
+    env_file:
+      - .env
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=${MONGO_INITDB_ROOT_USERNAME}
+      - MONGO_INITDB_ROOT_PASSWORD=${MONGO_INITDB_ROOT_PASSWORD}
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'mongosh --quiet -u $$MONGO_INITDB_ROOT_USERNAME -p $$MONGO_INITDB_ROOT_PASSWORD --eval "db.adminCommand(''ping'')"',
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  chroma:
+    image: chromadb/chroma:latest
+    ports:
+      - "8001:8000"
+    volumes:
+      - chroma_data:/chroma/chroma
+    healthcheck:
+      test: ["CMD-SHELL", "bash -c '</dev/tcp/127.0.0.1/8000'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  mongo_data:
+  chroma_data:
