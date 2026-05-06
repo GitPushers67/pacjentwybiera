@@ -25,8 +25,10 @@ function MealSlot({ meal, optionIdx, onFlip }: SlotProps) {
   const isRec = opt.isRec;
   const cardRef = useRef<HTMLDivElement>(null);
   const startX = useRef(0);
+  const startY = useRef(0);
   const dx = useRef(0);
   const dragging = useRef(false);
+  const dirLocked = useRef<'h' | 'v' | null>(null);
   const [animDir, setAnimDir] = useState<0 | 1 | -1>(0);
 
   const triggerFlip = useCallback((dir: 1 | -1) => {
@@ -57,24 +59,37 @@ function MealSlot({ meal, optionIdx, onFlip }: SlotProps) {
   const onPointerDown = (e: React.PointerEvent) => {
     dragging.current = true;
     startX.current = e.clientX;
+    startY.current = e.clientY;
     dx.current = 0;
+    dirLocked.current = null;
     const card = cardRef.current;
     if (card) card.style.transition = 'none';
-    (e.target as HTMLElement).setPointerCapture(e.pointerId);
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (!dragging.current) return;
-    dx.current = e.clientX - startX.current;
+    const deltaX = e.clientX - startX.current;
+    const deltaY = e.clientY - startY.current;
+
+    if (dirLocked.current === null) {
+      if (Math.abs(deltaX) < 5 && Math.abs(deltaY) < 5) return;
+      dirLocked.current = Math.abs(deltaX) >= Math.abs(deltaY) ? 'h' : 'v';
+    }
+
+    if (dirLocked.current === 'v') return;
+
+    e.stopPropagation();
+    dx.current = deltaX;
     const card = cardRef.current;
     if (card) {
       card.style.transform = `translateX(${dx.current}px) rotate(${dx.current * 0.025}deg)`;
     }
   };
 
-  const onPointerUp = () => {
+  const onPointerUp = (_e: React.PointerEvent) => {
     if (!dragging.current) return;
     dragging.current = false;
+    dirLocked.current = null;
     if (dx.current < -45) {
       triggerFlip(1);
     } else if (dx.current > 45) {

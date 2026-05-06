@@ -27,12 +27,26 @@
   user-select: none;
 }
 
-html, body, #root {
+html {
   height: 100%;
+  overflow: hidden;
+}
+
+body {
+  height: 100%;
+  overflow: hidden;
   margin: 0;
   padding: 0;
   font-family: system-ui, -apple-system, sans-serif;
   background: var(--bg);
+  /* Prevents rubber-band scroll on iOS */
+  position: fixed;
+  width: 100%;
+}
+
+#root {
+  height: 100%;
+  overflow: hidden;
 }
 
 .ion-page {
@@ -47,15 +61,23 @@ ion-app {
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  min-height: 100vh;
-  padding: 0;
-  background: #ddd6c8;
+  height: 100%;
+  background: var(--bg);
 }
 
 @media (min-width: 500px) {
+  body {
+    position: static;
+    overflow: auto;
+  }
+  #root {
+    overflow: auto;
+  }
   .app-wrap {
+    min-height: 100%;
+    height: auto;
     padding: 24px 0;
-    align-items: flex-start;
+    background: #ddd6c8;
   }
 }
 
@@ -63,7 +85,7 @@ ion-app {
   background: var(--bg);
   width: 100%;
   max-width: 390px;
-  min-height: 100vh;
+  height: 100%;
   display: flex;
   flex-direction: column;
   position: relative;
@@ -73,8 +95,6 @@ ion-app {
 @media (min-width: 500px) {
   .phone {
     border-radius: 36px;
-    min-height: 700px;
-    max-height: 850px;
     height: 810px;
     border: 1px solid var(--border);
     box-shadow: 0 24px 64px rgba(0,0,0,0.18);
@@ -105,6 +125,7 @@ ion-app {
 
 .topbar {
   padding: 22px 20px 12px;
+  padding-top: max(22px, calc(env(safe-area-inset-top) + 10px));
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -143,7 +164,7 @@ ion-app {
   display: flex;
   background: var(--card);
   border-top: 1px solid var(--border);
-  padding: 8px 0 16px;
+  padding: 8px 0 max(16px, env(safe-area-inset-bottom));
   flex-shrink: 0;
 }
 
@@ -157,6 +178,7 @@ ion-app {
   border: none;
   cursor: pointer;
   padding: 4px 0;
+  touch-action: manipulation;
 }
 
 .nb i { font-size: 20px; color: var(--text3); }
@@ -174,6 +196,7 @@ ion-app {
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .outline-btn {
@@ -186,6 +209,7 @@ ion-app {
   font-size: 13px;
   cursor: pointer;
   margin-top: 8px;
+  touch-action: manipulation;
 }
 
 .tag {
@@ -345,6 +369,8 @@ ion-app {
   padding: 13px;
   cursor: grab;
   will-change: transform;
+  /* pan-y: browser handles vertical scroll, we handle horizontal swipe */
+  touch-action: pan-y;
 }
 
 .swipe-card:active { cursor: grabbing; }
@@ -469,6 +495,7 @@ ion-app {
   cursor: pointer;
   border: 1px solid transparent;
   background: transparent;
+  touch-action: manipulation;
 }
 
 .dp span:first-child { font-size: 9px; color: var(--text2); margin-bottom: 2px; }
@@ -517,6 +544,7 @@ ion-app {
   align-items: center;
   gap: 5px;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .sym-btn i { font-size: 19px; color: var(--text2); }
@@ -534,6 +562,7 @@ ion-app {
   align-items: center;
   gap: 5px;
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .add-sym-btn i { font-size: 19px; color: var(--omid); }
