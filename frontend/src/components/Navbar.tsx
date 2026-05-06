@@ -18,7 +18,11 @@ export default function Navbar({ active, navigate }: Props) {
       </button>
       <button className={`nb ${active === 'order' ? 'on' : ''}`} onClick={() => navigate('order')}>
         <i className="ti ti-shopping-cart" />
-        <span>Zamówienie</span>
+        <span>Zamów</span>
+      </button>
+      <button className={`nb ${active === 'nutrition' ? 'on' : ''}`} onClick={() => navigate('nutrition')}>
+        <i className="ti ti-chart-bar" />
+        <span>Makra</span>
       </button>
       <button className={`nb ${active === 'profile' ? 'on' : ''}`} onClick={() => navigate('profile')}>
         <i className="ti ti-user" />

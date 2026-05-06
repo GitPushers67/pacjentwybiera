@@ -10,7 +10,11 @@ export interface MealOption {
   tags: Tag[];
   kcal: number;
   protein: number;
+  carbs: number;
+  fat: number;
   isRec: boolean;
+  score: number;
+  scoreReason: string;
 }
 
 export interface Meal {
@@ -18,6 +22,7 @@ export interface Meal {
   icon: string;
   title: string;
   time: string;
+  timeHour: number;
   options: MealOption[];
 }
 
@@ -36,6 +41,29 @@ export interface PlanDay {
   meals: PlanMeal[];
 }
 
-export type Screen = 'home' | 'plan' | 'order' | 'add-sym' | 'profile' | 'confirm';
+export interface Allergen {
+  key: string;
+  label: string;
+  icon: string;
+}
 
-export type SymptomKey = 'nausea' | 'taste' | 'diarrhea' | 'mouth' | 'const' | 'fatigue' | 'appetite' | 'dryness' | 'metal';
+export interface PatientProfile {
+  firstName: string;
+  lastName: string;
+  birthYear: number;
+  weightKg: number;
+  heightCm: number;
+  cancerType: string;
+  treatmentType: 'chemo' | 'radio' | 'surgery' | 'combined' | '';
+  allergens: string[];
+}
+
+export type EatenStatus = 'none' | 'full';
+
+export type Screen =
+  | 'onboarding' | 'home' | 'plan' | 'order' | 'add-sym' | 'profile'
+  | 'confirm' | 'welcome' | 'allergens' | 'nutrition';
+
+export type SymptomKey =
+  | 'nausea' | 'taste' | 'diarrhea' | 'mouth' | 'const'
+  | 'fatigue' | 'appetite' | 'dryness' | 'metal';

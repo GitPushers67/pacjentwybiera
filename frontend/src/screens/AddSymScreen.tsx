@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import SymptomModal from '../components/SymptomModal';
 import type { Screen } from '../types';
 
 interface Props {
@@ -19,51 +20,31 @@ const ALL_SYMPTOMS = [
   { key: 'dryness', icon: 'ti-droplets', label: 'Suchość w ustach' },
 ];
 
-const INTENSITY = ['Słabe', 'Umiarkowane', 'Silne'];
-
-function IntensityPicker() {
-  const [selected, setSelected] = useState('Umiarkowane');
-  return (
-    <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-      {INTENSITY.map((label) => {
-        const active = selected === label;
-        return (
-          <button
-            key={label}
-            style={{
-              flex: 1,
-              padding: 9,
-              borderRadius: 12,
-              border: active ? '1.5px solid var(--orange)' : '1px solid var(--border)',
-              background: active ? 'var(--olight)' : 'var(--card)',
-              fontSize: 12,
-              color: active ? 'var(--orange)' : 'var(--text2)',
-              fontWeight: active ? 600 : 400,
-              cursor: 'pointer',
-            }}
-            onClick={() => setSelected(label)}
-          >
-            {label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
-
 export default function AddSymScreen({ navigate, symptoms, setSymptoms }: Props) {
-  const toggle = (key: string) => {
-    if (symptoms.includes(key)) {
-      setSymptoms(symptoms.filter((s) => s !== key));
-    } else {
-      setSymptoms([...symptoms, key]);
-    }
+  const [modalSym, setModalSym] = useState<string | null>(null);
+  const [symIntensity, setSymIntensity] = useState<Record<string, number>>({});
+
+  const openSym = (key: string) => {
+    if (!symptoms.includes(key)) setSymptoms([...symptoms, key]);
+    setModalSym(key);
   };
+
+  const closeModal = () => setModalSym(null);
+
+  const removeSym = () => {
+    setSymptoms(symptoms.filter((s) => s !== modalSym));
+    setModalSym(null);
+  };
+
+  const activeSym = ALL_SYMPTOMS.find((s) => s.key === modalSym);
 
   return (
     <div className="screen active">
       <div className="topbar">
-        <div><h1>Dodaj objaw</h1></div>
+        <div>
+          <h1>Dodaj objaw</h1>
+          <p>Kliknij objaw, aby ustawić nasilenie</p>
+        </div>
         <button
           style={{ background: 'none', border: 'none', cursor: 'pointer' }}
           onClick={() => navigate('home')}
@@ -73,26 +54,62 @@ export default function AddSymScreen({ navigate, symptoms, setSymptoms }: Props)
       </div>
 
       <div className="scroll">
+        {symptoms.length > 0 && (
+          <div style={{
+            background: 'var(--olight)', border: '1px solid var(--omid)',
+            borderRadius: 11, padding: '9px 12px', marginBottom: 14,
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <i className="ti ti-check-circle" style={{ fontSize: 13, color: 'var(--orange)', flexShrink: 0 }} />
+            <p style={{ fontSize: 12, color: 'var(--text)', margin: 0 }}>
+              Aktywne: <strong>{symptoms.length}</strong> {symptoms.length === 1 ? 'objaw' : 'objawy'}
+              {' — '}kliknij objaw, aby edytować nasilenie
+            </p>
+          </div>
+        )}
+
         <div className="sym-grid">
-          {ALL_SYMPTOMS.map((s) => (
-            <div
-              key={s.key}
-              className={`sym-btn ${symptoms.includes(s.key) ? 'on' : ''}`}
-              onClick={() => toggle(s.key)}
-            >
-              <i className={`ti ${s.icon}`} />
-              <span>{s.label}</span>
-            </div>
-          ))}
+          {ALL_SYMPTOMS.map((s) => {
+            const active = symptoms.includes(s.key);
+            const intensity = symIntensity[s.key];
+            return (
+              <div
+                key={s.key}
+                className={`sym-btn ${active ? 'on' : ''}`}
+                onClick={() => openSym(s.key)}
+                style={{ position: 'relative' }}
+              >
+                <i className={`ti ${s.icon}`} />
+                <span>{s.label}</span>
+                {active && intensity && (
+                  <span style={{
+                    position: 'absolute', top: 4, right: 4,
+                    fontSize: 9, fontWeight: 700, color: 'var(--orange)',
+                    background: 'rgba(255,255,255,0.9)',
+                    borderRadius: 6, padding: '1px 4px',
+                  }}>
+                    {intensity}/5
+                  </span>
+                )}
+              </div>
+            );
+          })}
         </div>
 
-        <p style={{ fontSize: 12, color: 'var(--text2)', marginBottom: 8 }}>Nasilenie</p>
-        <IntensityPicker />
-
-        <button className="orange-btn" style={{ marginTop: 8 }} onClick={() => navigate('home')}>
+        <button className="orange-btn" style={{ marginTop: 16 }} onClick={() => navigate('home')}>
           Zapisz objawy
         </button>
       </div>
+
+      {modalSym && activeSym && (
+        <SymptomModal
+          symptom={activeSym}
+          intensity={symIntensity[modalSym] ?? 3}
+          onIntensityChange={(v) => setSymIntensity({ ...symIntensity, [modalSym]: v })}
+          onClose={closeModal}
+          onRemove={removeSym}
+        />
+      )}
     </div>
   );
 }
