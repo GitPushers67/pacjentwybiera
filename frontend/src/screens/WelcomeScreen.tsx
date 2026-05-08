@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Screen } from '../types';
+import logo from '../assets/logo.png';
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -47,6 +48,14 @@ export default function WelcomeScreen({ navigate, wellbeing, setWellbeing, sympt
   return (
     <div className="screen active" style={{ background: 'var(--bg)' }}>
       <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '32px 20px 24px' }}>
+
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <img
+            src={logo}
+            alt="Pacjent Wybiera"
+            style={{ height: 44, objectFit: 'contain' }}
+          />
+        </div>
 
         <div style={{ textAlign: 'center', marginBottom: 24 }}>
           <div className="mascot-bubble">

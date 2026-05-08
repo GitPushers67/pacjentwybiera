@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Screen, PatientProfile } from '../types';
 import { allergensList } from '../data';
+import logo from '../assets/logo.png';
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -62,6 +63,13 @@ export default function OnboardingScreen({ navigate, onComplete }: Props) {
   return (
     <div className="screen active" style={{ background: 'var(--bg)', overflowY: 'auto' }}>
       <div className="onboard-wrap">
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <img
+            src={logo}
+            alt="Pacjent Wybiera"
+            style={{ height: 52, objectFit: 'contain' }}
+          />
+        </div>
         <div className="onboard-step-indicators">
           {Array.from({ length: TOTAL_STEPS }, (_, i) => (
             <div key={i} className={`onboard-step-dot ${i + 1 <= step ? 'active' : ''}`} />
