@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { IonApp } from '@ionic/react';
-import type { Screen, EatenStatus, PatientProfile } from './types';
+import type { Screen, EatenStatus, PatientProfile, Meal } from './types';
 import HomeScreen from './screens/HomeScreen';
 import PlanScreen from './screens/PlanScreen';
 import OrderScreen from './screens/OrderScreen';
@@ -17,6 +17,7 @@ export default function App() {
   const [patient, setPatient] = useState<PatientProfile | null>(null);
   const [symptoms, setSymptoms] = useState<string[]>(['nausea']);
   const [choices, setChoices] = useState<Record<string, number>>({});
+  const [orderMeals, setOrderMeals] = useState<Meal[] | null>(null);
   const [wellbeing, setWellbeing] = useState(6);
   const [eatenMap, setEatenMap] = useState<Record<string, EatenStatus>>({
     breakfast: 'full',
@@ -61,9 +62,11 @@ export default function App() {
               patient={patient}
             />
           )}
-          {screen === 'plan' && <PlanScreen navigate={navigate} />}
+          {screen === 'plan' && (
+            <PlanScreen navigate={navigate} choices={choices} orderMeals={orderMeals} />
+          )}
           {screen === 'order' && (
-            <OrderScreen navigate={navigate} choices={choices} setChoices={setChoices} />
+            <OrderScreen navigate={navigate} choices={choices} setChoices={setChoices} setOrderMeals={setOrderMeals} />
           )}
           {screen === 'add-sym' && (
             <AddSymScreen navigate={navigate} symptoms={symptoms} setSymptoms={setSymptoms} />

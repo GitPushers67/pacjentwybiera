@@ -15,6 +15,9 @@ export interface MealOption {
   isRec: boolean;
   score: number;
   scoreReason: string;
+  ingredients?: string;
+  allergensText?: string;
+  weight?: string;
 }
 
 export interface Meal {
@@ -31,6 +34,9 @@ export interface PlanMeal {
   type: string;
   name: string;
   kcal: number;
+  protein?: number;
+  carbs?: number;
+  fat?: number;
   badge: string;
   bc: 'g' | 'o' | 'p' | '';
 }

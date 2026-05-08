@@ -1,9 +1,10 @@
-import { useEffect, useRef, useState, type Dispatch, type SetStateAction } from 'react';
+import { useEffect, useRef, useState, useMemo, type Dispatch, type SetStateAction } from 'react';
 import Navbar from '../components/Navbar';
 import SymptomModal from '../components/SymptomModal';
 import type { EatenStatus, Meal, PatientProfile, Screen } from '../types';
-import { meals, getDailyTargets } from '../data';
-import { getOption } from '../utils';
+import { meals as fallbackMeals } from '../data';
+import { getOption, getToday, formatDateForAPI } from '../utils';
+import { fetchMenuForDate } from '../api';
 import logo from '../assets/logo.png';
 
 type CamState = 'idle' | 'scanning' | 'done';
@@ -80,24 +81,15 @@ function MealCard({ meal, isCurrent, choices, status, camState, onEaten, onCamer
   return (
     <div className={`hmc ${isCurrent ? 'hmc-current ' : ''}${status === 'full' ? 'hmc-eaten' : 'hmc-not-eaten'}`}>
       <div className="hmc-top">
-        <div className="hmc-emoji">{opt.emoji}</div>
         <div className="hmc-info">
           <div className="hmc-type">{meal.title} · {meal.time}</div>
           <div className="hmc-name">{opt.name}</div>
         </div>
         <EatenToggle value={status} onChange={onEaten} />
       </div>
-      <div style={{ display: 'flex', gap: 4, marginBottom: 7, flexWrap: 'wrap' }}>
-        {opt.tags.map((tag) => (
-          <span key={tag.t} className={`tag ${tag.c}`}>{tag.t}</span>
-        ))}
-      </div>
-      <div className="hmc-foot">
-        <span className="hmc-kcal">{opt.kcal} kcal · {opt.protein}g B · {opt.carbs}g W · {opt.fat}g T</span>
-        <div className="score-badge">
-          <i className="ti ti-brain" />
-          <span>{opt.score}/10</span>
-        </div>
+      <div style={{ display: 'flex', gap: 5, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        <span className="tag b">{opt.protein}g białka</span>
+        <span className="tag o">{opt.kcal} kcal</span>
       </div>
       <CameraButton camState={camState} onPress={onCamera} />
     </div>
@@ -122,17 +114,23 @@ function useNow() {
   return now;
 }
 
-export default function HomeScreen({ navigate, symptoms, setSymptoms, choices, eatenMap, setEatenMap, patient }: Props) {
-  const [showLiquidTip, setShowLiquidTip] = useState(true);
+export default function HomeScreen({ navigate, symptoms, setSymptoms, choices, eatenMap, setEatenMap }: Props) {
   const [modalSym, setModalSym] = useState<string | null>(null);
   const [symIntensity, setSymIntensity] = useState<Record<string, number>>({});
   const [cameraMap, setCameraMap] = useState<Record<string, CamState>>({});
+  const [apiMeals, setApiMeals] = useState<Meal[] | null>(null);
   const now = useNow();
   const timerRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  const today = useMemo(() => getToday(), []);
+
   useEffect(() => () => { timerRefs.current.forEach(clearTimeout); }, []);
 
-  const targets = getDailyTargets(patient.weightKg);
+  useEffect(() => {
+    fetchMenuForDate(formatDateForAPI(today)).then(setApiMeals);
+  }, [today]);
+
+  const meals = apiMeals ?? fallbackMeals;
 
   const openSym = (key: string) => {
     if (!symptoms.includes(key)) setSymptoms([...symptoms, key]);
@@ -153,13 +151,9 @@ export default function HomeScreen({ navigate, symptoms, setSymptoms, choices, e
 
   const currentMealId = getCurrentMealId();
 
-  const totalKcalEaten = meals.reduce((sum, m) => {
-    const opt = getOption(m, choices[m.id] ?? 0);
-    return sum + opt.kcal * (eatenMap[m.id] === 'full' ? 1 : 0);
-  }, 0);
+  const totalKcalEaten    = meals.reduce((s, m) => s + getOption(m, choices[m.id] ?? 0).kcal    * (eatenMap[m.id] === 'full' ? 1 : 0), 0);
+  const totalProteinEaten = meals.reduce((s, m) => s + getOption(m, choices[m.id] ?? 0).protein * (eatenMap[m.id] === 'full' ? 1 : 0), 0);
 
-  const kcalPct = Math.round((totalKcalEaten / targets.kcal) * 100);
-  const showLiquidAlert = showLiquidTip && kcalPct < 40 && Object.keys(eatenMap).length >= 2;
   const activeSym = SYMPTOMS.find((s) => s.key === modalSym);
 
   return (
@@ -210,28 +204,19 @@ export default function HomeScreen({ navigate, symptoms, setSymptoms, choices, e
         </div>
       </div>
 
-      {showLiquidAlert && (
-        <div style={{ padding: '0 16px 8px' }}>
-          <div className="liquid-alert">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-              <div style={{ display: 'flex', gap: 7, alignItems: 'flex-start', flex: 1 }}>
-                <i className="ti ti-alert-triangle" style={{ fontSize: 15, color: 'var(--amber)', marginTop: 1, flexShrink: 0 }} />
-                <div>
-                  <p style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 3 }}>
-                    Ryzyko niedojedzenia
-                  </p>
-                  <p style={{ fontSize: 11, color: 'var(--text2)', lineHeight: 1.45, margin: 0 }}>
-                    Spożyłeś/aś tylko {kcalPct}% dziennego zapotrzebowania. Rozważ <strong>Shot Białkowy Ensure</strong> (200 kcal, 15g białka) z oferty.
-                  </p>
-                </div>
-              </div>
-              <button onClick={() => setShowLiquidTip(false)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '0 0 0 8px' }}>
-                <i className="ti ti-x" style={{ fontSize: 13, color: 'var(--text3)' }} />
-              </button>
-            </div>
-          </div>
+
+      <div style={{ padding: '0 16px 10px', display: 'flex', gap: 8 }}>
+        <div className="home-stat-pill home-stat-orange">
+          <i className="ti ti-flame" style={{ fontSize: 13, color: 'var(--orange)' }} />
+          <span className="hsp-val">{totalKcalEaten}</span>
+          <span className="hsp-lbl">kcal spożyte</span>
         </div>
-      )}
+        <div className="home-stat-pill home-stat-blue">
+          <i className="ti ti-barbell" style={{ fontSize: 13, color: '#3b82f6' }} />
+          <span className="hsp-val">{totalProteinEaten}g</span>
+          <span className="hsp-lbl">białka spożyte</span>
+        </div>
+      </div>
 
       <div className="scroll">
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 9 }}>
