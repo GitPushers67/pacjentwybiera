@@ -3,22 +3,24 @@
 @tailwind utilities;
 
 :root {
-  --bg: #F5F0E8;
+  --bg: #F0F8F8;
   --card: #fff;
-  --orange: #E8732A;
-  --olight: #FDF0E8;
-  --omid: #F5C4A0;
-  --text: #2C2416;
-  --text2: #8A7D6E;
-  --text3: #B5A898;
-  --border: #E8E0D4;
+  --orange: #2BBDB8;
+  --olight: #E4F5F5;
+  --omid: #96D9D7;
+  --text: #1A3535;
+  --text2: #5A7C7C;
+  --text3: #8AABAB;
+  --border: #CEEAE9;
   --green: #2D7D5A;
   --glight: #E8F5EE;
   --gmid: #9FE1CB;
   --red: #C0392B;
   --rlight: #FDECEA;
-  --amber: #C47C1A;
-  --alight: #FEF3E2;
+  --amber: #D4870A;
+  --alight: #FEF5E4;
+  --brand-orange: #F5A320;
+  --brand-orange-light: #FEF3E0;
 }
 
 * {
@@ -150,14 +152,14 @@ ion-app {
   display: flex;
   align-items: center;
   gap: 5px;
-  background: var(--olight);
-  border: 1.5px solid var(--omid);
+  background: var(--brand-orange-light);
+  border: 1.5px solid #F5C780;
   border-radius: 20px;
   padding: 6px 12px;
 }
 
-.streak-pill i { font-size: 15px; color: var(--orange); }
-.streak-pill span { font-size: 13px; font-weight: 600; color: var(--orange); }
+.streak-pill i { font-size: 15px; color: var(--brand-orange); }
+.streak-pill span { font-size: 13px; font-weight: 600; color: var(--brand-orange); }
 .streak-pill small { font-size: 10px; color: var(--text2); }
 
 .navbar {
@@ -249,7 +251,7 @@ ion-app {
 .diet-pill {
   display: inline-flex;
   align-items: center;
-  background: var(--orange);
+  background: var(--brand-orange);
   border-radius: 20px;
   padding: 4px 11px;
 }
@@ -411,7 +413,7 @@ ion-app {
 .card-name { font-size: 13px; font-weight: 600; color: var(--text); line-height: 1.3; margin-bottom: 2px; }
 .card-why { font-size: 11px; line-height: 1.45; margin-bottom: 6px; }
 .card-why.green { color: var(--green); }
-.card-why.orange { color: #7a3d12; }
+.card-why.orange { color: #0e4d4b; }
 .card-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 5px; }
 .card-foot { display: flex; align-items: center; justify-content: space-between; }
 .card-kcal { font-size: 11px; color: var(--text2); }

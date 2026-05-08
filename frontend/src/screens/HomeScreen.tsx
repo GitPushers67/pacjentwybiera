@@ -4,6 +4,7 @@ import SymptomModal from '../components/SymptomModal';
 import type { EatenStatus, Meal, PatientProfile, Screen } from '../types';
 import { meals, getDailyTargets } from '../data';
 import { getOption } from '../utils';
+import logo from '../assets/logo.png';
 
 type CamState = 'idle' | 'scanning' | 'done';
 
@@ -120,11 +121,21 @@ function getMascotMood(w: number): string {
   return '😊';
 }
 
+function useNow() {
+  const [now, setNow] = useState(new Date());
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 30_000);
+    return () => clearInterval(id);
+  }, []);
+  return now;
+}
+
 export default function HomeScreen({ navigate, symptoms, setSymptoms, wellbeing, choices, eatenMap, setEatenMap, patient }: Props) {
   const [showLiquidTip, setShowLiquidTip] = useState(true);
   const [modalSym, setModalSym] = useState<string | null>(null);
   const [symIntensity, setSymIntensity] = useState<Record<string, number>>({});
   const [cameraMap, setCameraMap] = useState<Record<string, CamState>>({});
+  const now = useNow();
   const timerRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
 
   useEffect(() => () => { timerRefs.current.forEach(clearTimeout); }, []);
@@ -161,13 +172,21 @@ export default function HomeScreen({ navigate, symptoms, setSymptoms, wellbeing,
 
   return (
     <div className="screen active">
-      <div className="topbar">
-        <div>
-          <h1>Dzień dobry, {patient.firstName}!</h1>
-          <p>środa, 7 maja 2026</p>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div className="mascot-mini">{getMascotMood(wellbeing)}</div>
+      <div className="topbar" style={{ alignItems: 'center' }}>
+        <img
+          src={logo}
+          alt="Pacjent Wybiera"
+          style={{ height: 44, objectFit: 'contain' }}
+        />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ textAlign: 'right' }}>
+            <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--text)', lineHeight: 1 }}>
+              {now.toLocaleTimeString('pl-PL', { hour: '2-digit', minute: '2-digit' })}
+            </div>
+            <div style={{ fontSize: 10, color: 'var(--text2)', marginTop: 2 }}>
+              środa, 7 maja
+            </div>
+          </div>
           <div className="streak-pill">
             <i className="ti ti-flame" />
             <span>5</span>
