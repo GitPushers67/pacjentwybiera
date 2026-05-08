@@ -113,14 +113,6 @@ function getCurrentMealId(): string {
   return 'supper';
 }
 
-function getMascotMood(w: number): string {
-  if (w <= 2) return '😰';
-  if (w <= 4) return '😟';
-  if (w <= 6) return '😐';
-  if (w <= 8) return '🙂';
-  return '😊';
-}
-
 function useNow() {
   const [now, setNow] = useState(new Date());
   useEffect(() => {
@@ -130,7 +122,7 @@ function useNow() {
   return now;
 }
 
-export default function HomeScreen({ navigate, symptoms, setSymptoms, wellbeing, choices, eatenMap, setEatenMap, patient }: Props) {
+export default function HomeScreen({ navigate, symptoms, setSymptoms, choices, eatenMap, setEatenMap, patient }: Props) {
   const [showLiquidTip, setShowLiquidTip] = useState(true);
   const [modalSym, setModalSym] = useState<string | null>(null);
   const [symIntensity, setSymIntensity] = useState<Record<string, number>>({});
