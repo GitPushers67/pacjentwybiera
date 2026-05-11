@@ -12,7 +12,8 @@ RUN pip install --no-cache-dir \
     chromadb \
     openai \
     motor \
-    pydantic-settings
+    pydantic-settings \
+    httpx
 
 COPY . /app/
 RUN chmod +x /app/entrypoint.sh

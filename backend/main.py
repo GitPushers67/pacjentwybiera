@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from logmeal import router as logmeal_router
 
 
 class Settings(BaseSettings):
@@ -13,6 +14,8 @@ class Settings(BaseSettings):
     chroma_host: str = "localhost"
     chroma_port: int = 8000
     cors_origins: list[str] = Field(default_factory=list)
+    logmeal_api_key: str = ""
+    logmeal_url: str = "https://api.logmeal.es/v2/nutrition/recipe/nutritional_info"
 
     model_config = SettingsConfigDict(extra="ignore")
 
@@ -48,6 +51,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Zaincluduj routery
+app.include_router(logmeal_router)
 
 
 @app.get("/")
