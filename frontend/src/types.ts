@@ -73,3 +73,15 @@ export type Screen =
 export type SymptomKey =
   | 'nausea' | 'taste' | 'diarrhea' | 'mouth' | 'const'
   | 'fatigue' | 'appetite' | 'dryness' | 'metal';
+
+export interface SymptomEntry {
+  key: string;
+  severity: 1 | 3 | 5;
+}
+
+export interface SymptomHistoryEntry {
+  key: string;
+  addedAt: string;
+  scale: number;
+  note?: string;
+}

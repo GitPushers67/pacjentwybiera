@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState, useMemo, type Dispatch, type SetStateAction } from 'react';
 import Navbar from '../components/Navbar';
-import SymptomModal from '../components/SymptomModal';
 import type { EatenStatus, Meal, PatientProfile, Screen } from '../types';
 import { meals as fallbackMeals } from '../data';
 import { getOption, getToday, formatDateForAPI } from '../utils';
@@ -19,12 +18,6 @@ interface Props {
   setEatenMap: Dispatch<SetStateAction<Record<string, EatenStatus>>>;
   patient: PatientProfile;
 }
-
-const SYMPTOMS = [
-  { key: 'nausea', icon: 'ti-mood-sick', label: 'Nudności' },
-  { key: 'appetite', icon: 'ti-bowl', label: 'Brak apetytu' },
-  { key: 'diarrhea', icon: 'ti-ripple', label: 'Biegunka' },
-];
 
 const CAM_LABEL: Record<CamState, string> = {
   idle:     'Zrób zdjęcie — AI wykryje co zjedzone',
@@ -87,10 +80,6 @@ function MealCard({ meal, isCurrent, choices, status, camState, onEaten, onCamer
         </div>
         <EatenToggle value={status} onChange={onEaten} />
       </div>
-      <div style={{ display: 'flex', gap: 5, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-        <span className="tag b">{opt.protein}g białka</span>
-        <span className="tag o">{opt.kcal} kcal</span>
-      </div>
       <CameraButton camState={camState} onPress={onCamera} />
     </div>
   );
@@ -114,9 +103,7 @@ function useNow() {
   return now;
 }
 
-export default function HomeScreen({ navigate, symptoms, setSymptoms, choices, eatenMap, setEatenMap }: Props) {
-  const [modalSym, setModalSym] = useState<string | null>(null);
-  const [symIntensity, setSymIntensity] = useState<Record<string, number>>({});
+export default function HomeScreen({ navigate, choices, eatenMap, setEatenMap }: Props) {
   const [cameraMap, setCameraMap] = useState<Record<string, CamState>>({});
   const [apiMeals, setApiMeals] = useState<Meal[] | null>(null);
   const now = useNow();
@@ -132,11 +119,6 @@ export default function HomeScreen({ navigate, symptoms, setSymptoms, choices, e
 
   const meals = apiMeals ?? fallbackMeals;
 
-  const openSym = (key: string) => {
-    if (!symptoms.includes(key)) setSymptoms([...symptoms, key]);
-    setModalSym(key);
-  };
-
   const triggerCamera = (mealId: string) => {
     if (cameraMap[mealId] === 'scanning') return;
     setCameraMap(prev => ({ ...prev, [mealId]: 'scanning' }));
@@ -150,11 +132,6 @@ export default function HomeScreen({ navigate, symptoms, setSymptoms, choices, e
   };
 
   const currentMealId = getCurrentMealId();
-
-  const totalKcalEaten    = meals.reduce((s, m) => s + getOption(m, choices[m.id] ?? 0).kcal    * (eatenMap[m.id] === 'full' ? 1 : 0), 0);
-  const totalProteinEaten = meals.reduce((s, m) => s + getOption(m, choices[m.id] ?? 0).protein * (eatenMap[m.id] === 'full' ? 1 : 0), 0);
-
-  const activeSym = SYMPTOMS.find((s) => s.key === modalSym);
 
   return (
     <div className="screen active">
@@ -182,40 +159,25 @@ export default function HomeScreen({ navigate, symptoms, setSymptoms, choices, e
       </div>
 
       <div style={{ padding: '0 16px 12px' }}>
-        <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 9 }}>
-          Jak się teraz czujesz?
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {SYMPTOMS.map((s) => (
-            <div
-              key={s.key}
-              className={`sym-btn ${symptoms.includes(s.key) ? 'on' : ''}`}
-              style={{ flex: 1 }}
-              onClick={() => openSym(s.key)}
-            >
-              <i className={`ti ${s.icon}`} />
-              <span>{s.label}</span>
-            </div>
-          ))}
-          <div className="add-sym-btn" style={{ flex: 1 }} onClick={() => navigate('add-sym')}>
-            <i className="ti ti-plus" />
-            <span>Więcej</span>
+        <button
+          onClick={() => navigate('add-sym')}
+          style={{
+            width: '100%',
+            border: '1px solid var(--border)',
+            background: '#fff',
+            borderRadius: 14,
+            padding: '10px 12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            cursor: 'pointer',
+          }}
+        >
+          <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text)' }}>
+            Jak się dziś czujesz?
           </div>
-        </div>
-      </div>
-
-
-      <div style={{ padding: '0 16px 10px', display: 'flex', gap: 8 }}>
-        <div className="home-stat-pill home-stat-orange">
-          <i className="ti ti-flame" style={{ fontSize: 13, color: 'var(--orange)' }} />
-          <span className="hsp-val">{totalKcalEaten}</span>
-          <span className="hsp-lbl">kcal spożyte</span>
-        </div>
-        <div className="home-stat-pill home-stat-blue">
-          <i className="ti ti-barbell" style={{ fontSize: 13, color: '#3b82f6' }} />
-          <span className="hsp-val">{totalProteinEaten}g</span>
-          <span className="hsp-lbl">białka spożyte</span>
-        </div>
+          <i className="ti ti-chevron-right" style={{ fontSize: 16, color: 'var(--text2)' }} />
+        </button>
       </div>
 
       <div className="scroll">
@@ -263,16 +225,6 @@ export default function HomeScreen({ navigate, symptoms, setSymptoms, choices, e
           Zamów posiłki na piątek, 8 maja →
         </button>
       </div>
-
-      {modalSym && activeSym && (
-        <SymptomModal
-          symptom={activeSym}
-          intensity={symIntensity[modalSym] ?? 3}
-          onIntensityChange={(v) => setSymIntensity({ ...symIntensity, [modalSym]: v })}
-          onClose={() => setModalSym(null)}
-          onRemove={() => { setSymptoms(symptoms.filter((s) => s !== modalSym)); setModalSym(null); }}
-        />
-      )}
 
       <Navbar active="home" navigate={navigate} />
     </div>

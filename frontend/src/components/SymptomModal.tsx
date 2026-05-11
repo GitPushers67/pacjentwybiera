@@ -10,14 +10,29 @@ interface Props {
   symptom: SymInfo;
   intensity: number;
   onIntensityChange: (v: number) => void;
+  note: string;
+  onNoteChange: (v: string) => void;
   onClose: () => void;
+  onDone: () => void;
   onRemove: () => void;
 }
 
-const INTENSITY_LABELS = ['', 'Słabe', 'Umiarkowane', 'Średnie', 'Silne', 'Bardzo silne'];
-const INTENSITY_COLORS = ['', 'var(--green)', 'var(--green)', 'var(--amber)', 'var(--amber)', 'var(--red)'];
+function getIntensityColor(value: number): string {
+  if (value < 34) return 'var(--green)';
+  if (value < 67) return 'var(--amber)';
+  return 'var(--red)';
+}
 
-export default function SymptomModal({ symptom, intensity, onIntensityChange, onClose, onRemove }: Props) {
+export default function SymptomModal({
+  symptom,
+  intensity,
+  note,
+  onIntensityChange,
+  onNoteChange,
+  onClose,
+  onDone,
+  onRemove,
+}: Props) {
   const tip = symptomTips[symptom.key as keyof typeof symptomTips];
 
   return (
@@ -45,20 +60,42 @@ export default function SymptomModal({ symptom, intensity, onIntensityChange, on
         <div style={{ marginBottom: 18 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: 10 }}>
             <span style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>Nasilenie objawu</span>
-            <span style={{ fontSize: 13, fontWeight: 700, color: INTENSITY_COLORS[intensity] }}>
-              {intensity}/5 · {INTENSITY_LABELS[intensity]}
+            <span style={{ fontSize: 13, fontWeight: 700, color: getIntensityColor(intensity) }}>
+              {intensity}%
             </span>
           </div>
           <input
-            type="range" min={1} max={5} step={1}
+            type="range" min={0} max={100} step={1}
             value={intensity}
             onChange={(e) => onIntensityChange(Number(e.target.value))}
             className="wellbeing-range"
           />
           <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 5 }}>
-            <span style={{ fontSize: 10, color: 'var(--text3)' }}>Słabe</span>
-            <span style={{ fontSize: 10, color: 'var(--text3)' }}>Bardzo silne</span>
+            <span style={{ fontSize: 10, color: 'var(--text3)' }}>0%</span>
+            <span style={{ fontSize: 10, color: 'var(--text3)' }}>100%</span>
           </div>
+        </div>
+
+        <div style={{ marginBottom: 18 }}>
+          <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 8 }}>
+            Notatka
+          </div>
+          <textarea
+            value={note}
+            onChange={(e) => onNoteChange(e.target.value)}
+            placeholder="Np. objaw nasila się po ciepłych potrawach"
+            rows={3}
+            style={{
+              width: '100%',
+              border: '1px solid var(--border)',
+              borderRadius: 11,
+              padding: '9px 10px',
+              fontSize: 12,
+              color: 'var(--text)',
+              resize: 'vertical',
+              background: '#fff',
+            }}
+          />
         </div>
 
         {tip && (
@@ -87,7 +124,7 @@ export default function SymptomModal({ symptom, intensity, onIntensityChange, on
           >
             Usuń objaw
           </button>
-          <button className="orange-btn" style={{ flex: 2, margin: 0 }} onClick={onClose}>
+          <button className="orange-btn" style={{ flex: 2, margin: 0 }} onClick={onDone}>
             Gotowe
           </button>
         </div>

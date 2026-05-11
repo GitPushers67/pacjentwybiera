@@ -1,6 +1,7 @@
-import type { Meal } from './types';
+import type { Meal, PatientProfile } from './types';
 
 const API_BASE = 'https://pacjentwybiera.pl/wp-json/mobilnycatering/v1/menu-schedules';
+const PATIENTS_STORAGE_KEY = 'pacjentwybiera:patients';
 
 const SLOT_META: Record<number, { id: string; icon: string; time: string; timeHour: number }> = {
   0: { id: 'breakfast', icon: '🥣', time: 'ok. 8:00', timeHour: 8 },
@@ -88,4 +89,26 @@ export async function fetchMenuForDate(dateStr: string): Promise<Meal[] | null> 
   } catch {
     return null;
   }
+}
+
+export async function listPatients(): Promise<PatientProfile[]> {
+  if (typeof window === 'undefined') return [];
+
+  const raw = window.localStorage.getItem(PATIENTS_STORAGE_KEY);
+  if (!raw) return [];
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  if (!Array.isArray(parsed)) return [];
+
+  return parsed.filter((p): p is PatientProfile => (
+    typeof p === 'object' &&
+    p !== null &&
+    typeof (p as PatientProfile).firstName === 'string' &&
+    typeof (p as PatientProfile).lastName === 'string'
+  ));
 }

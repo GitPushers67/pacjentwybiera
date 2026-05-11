@@ -20,6 +20,10 @@ export default function Navbar({ active, navigate }: Props) {
         <i className="ti ti-shopping-cart" />
         <span>Zamów</span>
       </button>
+      <button className={`nb ${active === 'add-sym' ? 'on' : ''}`} onClick={() => navigate('add-sym')}>
+        <i className="ti ti-mood-sick" />
+        <span>Objawy</span>
+      </button>
       <button className={`nb ${active === 'nutrition' ? 'on' : ''}`} onClick={() => navigate('nutrition')}>
         <i className="ti ti-chart-bar" />
         <span>Makra</span>
