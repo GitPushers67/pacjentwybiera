@@ -1,6 +1,11 @@
 """
-Moduł do logiki analizy resztek posiłku.
+Moduł do logiki analizy resztek posiłku (Waste Detection).
 Porównuje zdjęcie (rezultat LogMeal) z "prawdą o posiłku" z bazy danych.
+
+LogMeal /image/segmentation/complete endpoint zwraca estimated_weight dla każdego składnika.
+Używamy METODY RÓŻNICOWEJ:
+  Zjedzona Masa = weight_grams (z menu) - estimated_weight (z LogMeal)
+  Procent = (Zjedzona Masa / weight_grams) * 100
 """
 
 from pydantic import BaseModel
@@ -17,36 +22,28 @@ class NutrientInfo(BaseModel):
 class MealTruth(BaseModel):
     """'Prawda o posiłku' - co powinno być na talerzu"""
     dish_name: str
-    ingredients: list[str]  # lista składników
+    ingredients: list[str]  # lista składników z API
     nutrients: NutrientInfo
     weight_grams: float
 
 
-class LogMealDetection(BaseModel):
-    """Jeden wykryty obiekt z LogMeal API"""
-    food_item: str  # nazwa składnika/dania
-    volume_ml: float | None = None  # objętość w ml
-    weight_grams: float | None = None  # waga w g
-    confidence: float = 1.0  # pewność rozpoznania (0-1)
+class SegmentationItem(BaseModel):
+    """Jeden segment z LogMeal /image/segmentation/complete"""
+    food_item: str
+    estimated_weight: float | None = None
+    quantity: dict | None = None
 
 
-class LeftoverAnalysis(BaseModel):
-    """Wynik analizy - co zostało, co brakuje"""
-    leftover_percentage: float  # % zjadanego posiłku (0-100)
-    missing_nutrients: NutrientInfo
-    detected_items: list[str]  # co LogMeal widzi na zdjęciu
-    recommendation: dict | None = None
-
-
-def parse_logmeal_response(logmeal_json: dict) -> list[LogMealDetection]:
+def parse_segmentation_response(logmeal_json: dict) -> list[SegmentationItem]:
     """
-    Parsuje odpowiedź z LogMeal API.
+    Parsuje odpowiedź z LogMeal /image/segmentation/complete.
     
-    Oczekiwany format (na podstawie dokumentacji LogMeal):
+    Oczekiwany format:
     {
-        "nutrition_info": [
+        "segmentation_results": [
             {
-                "food_item": "salmon",
+                "food_item": "muffins",
+                "estimated_weight": 150,
                 "quantity": {"value": 150, "unit": "g"},
                 ...
             },
@@ -54,125 +51,123 @@ def parse_logmeal_response(logmeal_json: dict) -> list[LogMealDetection]:
         ]
     }
     """
-    detections = []
+    items = []
     
-    nutrition_info = logmeal_json.get("nutrition_info", [])
+    # Spróbuj różne możliwe klucze w odpowiedzi
+    segmentation = logmeal_json.get("segmentation_results") or logmeal_json.get("segmentation") or []
     
-    for item in nutrition_info:
+    for item in segmentation:
         food_name = item.get("food_item", "unknown")
+        estimated_weight = item.get("estimated_weight")
         
-        # Spróbuj wyodrębnić wagę
-        quantity = item.get("quantity", {})
-        weight = None
+        # Jeśli nie ma estimated_weight, spróbuj wyciągnąć z quantity
+        if estimated_weight is None:
+            quantity = item.get("quantity", {})
+            if isinstance(quantity, dict) and quantity.get("unit") == "g":
+                estimated_weight = float(quantity.get("value", 0))
         
-        if quantity.get("unit") == "g":
-            weight = float(quantity.get("value", 0))
-        elif quantity.get("unit") == "ml":
-            # Assume 1ml ≈ 1g as approximation
-            weight = float(quantity.get("value", 0))
-        
-        confidence = item.get("confidence", 1.0)
-        
-        detection = LogMealDetection(
+        seg_item = SegmentationItem(
             food_item=food_name,
-            weight_grams=weight,
-            confidence=confidence
+            estimated_weight=estimated_weight,
+            quantity=item.get("quantity")
         )
-        detections.append(detection)
+        items.append(seg_item)
     
-    return detections
+    return items
 
 
-def calculate_leftover_percentage(
+def calculate_consumed_by_differential_method(
     truth: MealTruth,
-    detections: list[LogMealDetection]
-) -> tuple[float, list[str]]:
+    segmentation_items: list[SegmentationItem]
+) -> tuple[float, dict]:
     """
-    Porównuje co LogMeal widzi z "prawdą o posiłku".
+    Oblicza zjedzoną masę i makroskładniki używając METODY RÓŻNICOWEJ.
+    
+    Logika:
+    1. Suma wszystkich estimated_weight z LogMeal = Masa pozostała na talerzu
+    2. Zjedzona Masa = weight_grams (z menu) - Masa pozostała
+    3. Procent = (Zjedzona Masa / weight_grams) * 100
+    4. Brakujące = Procent × Wartości bazowe
     
     Zwraca:
-    - Procent pozostałości (0 = zjedzono wszystko, 100 = nic nie zjedzono)
-    - Listę wykrytych składników
+    - Procent zjedzony (0-100)
+    - Słownik brakujących makroskładników
     """
     
-    if not detections:
-        # Jeśli nic nie widać na zdjęciu, assume całość pozostała
-        return 100.0, []
+    if not segmentation_items or all(item.estimated_weight is None for item in segmentation_items):
+        # Jeśli nic nie rozpoznano, assume całość pozostała
+        print("⚠️ LogMeal nie rozpoznał pozostałości. Zakładam 100% waste_percentage.")
+        return 0.0, {
+            "kcal": truth.nutrients.kcal,
+            "protein": truth.nutrients.protein,
+            "fat": truth.nutrients.fat,
+            "carbohydrates": truth.nutrients.carbohydrates,
+        }
     
-    detected_foods = [d.food_item.lower() for d in detections]
-    truth_ingredients = [ing.lower() for ing in truth.ingredients]
-    
-    # Matchuj składniki (fuzzy matching: czy substring zawiera się)
-    matched_count = 0
-    for detected in detected_foods:
-        for ingredient in truth_ingredients:
-            if detected in ingredient or ingredient in detected:
-                matched_count += 1
-                break
-    
-    if not truth.ingredients:
-        match_ratio = 0.5  # fallback
-    else:
-        match_ratio = matched_count / len(truth.ingredients)
-    
-    # Procent pozostałości ≈ inverse match ratio
-    leftover_percentage = (1 - match_ratio) * 100
-    
-    return leftover_percentage, detected_foods
-
-
-def calculate_missing_nutrients(
-    truth: MealTruth,
-    leftover_percentage: float
-) -> NutrientInfo:
-    """
-    Oblicza brakujące makroskładniki na podstawie % pozostałości.
-    
-    Jeśli leftover_percentage = 60, to 40% zjedzono, 60% zostało.
-    Brakujące = 40% × nutrients_truth
-    """
-    
-    # Procent zjedzony
-    eaten_percentage = 100 - leftover_percentage
-    eaten_ratio = eaten_percentage / 100
-    
-    # Brakujące to to co NIE zostało zjedzane
-    missing = NutrientInfo(
-        kcal=truth.nutrients.kcal * eaten_ratio,
-        protein=truth.nutrients.protein * eaten_ratio,
-        fat=truth.nutrients.fat * eaten_ratio,
-        carbohydrates=truth.nutrients.carbohydrates * eaten_ratio,
+    # Suma wszystkich rozpoznanych mas na talerzu
+    leftover_mass = sum(
+        item.estimated_weight for item in segmentation_items 
+        if item.estimated_weight is not None
     )
     
-    return missing
+    # Zjedzona masa
+    consumed_mass = truth.weight_grams - leftover_mass
+    
+    # Procent zjedzony
+    if truth.weight_grams > 0:
+        consumed_percent = (consumed_mass / truth.weight_grams) * 100
+    else:
+        consumed_percent = 0.0
+    
+    # Ograniczenie: 0-100%
+    consumed_percent = max(0, min(100, consumed_percent))
+    
+    # Brakujące makroskładniki = co NIE zostało zjedzane
+    # Jeśli zjedzono 60%, to brakuje 40%
+    leftover_percent = 100 - consumed_percent
+    leftover_ratio = leftover_percent / 100
+    
+    missing = {
+        "kcal": round(truth.nutrients.kcal * leftover_ratio, 1),
+        "protein": round(truth.nutrients.protein * leftover_ratio, 1),
+        "fat": round(truth.nutrients.fat * leftover_ratio, 1),
+        "carbohydrates": round(truth.nutrients.carbohydrates * leftover_ratio, 1),
+    }
+    
+    print(f"📊 Metoda Różnicowa:")
+    print(f"  Waga menu: {truth.weight_grams}g")
+    print(f"  Waga resztek (LogMeal): {leftover_mass}g")
+    print(f"  Zjedzona masa: {consumed_mass}g")
+    print(f"  Procent zjedzony: {consumed_percent:.1f}%")
+    print(f"  Brakujące makroskładniki: {missing}")
+    
+    return consumed_percent, missing
 
 
-def should_recommend_supplement(missing: NutrientInfo) -> bool:
+def should_recommend_supplement(missing: dict) -> bool:
     """
     Decyduje czy wyzwolić rekomendację suplementacji.
     
-    Progi wyzwolenia (plan.md):
+    Progi wyzwolenia:
     - Białko > 5g LUB
     - Kalorie > 100 kcal
     """
     
-    if missing.protein > 5.0 or missing.kcal > 100.0:
+    if missing.get("protein", 0) > 5.0 or missing.get("kcal", 0) > 100.0:
         return True
     
     return False
 
 
-def format_recommendation(missing: NutrientInfo, supplement_name: str = "OnkoShot") -> dict:
+def format_recommendation(missing: dict, supplement_name: str = "OnkoShot") -> dict:
     """Formatuje rekomendację suplementacji dla frontendu"""
     
     return {
         "title": "Potrzebujesz doładowania!",
-        "text": f"Brakuje Ci {missing.protein:.1f}g białka i {missing.kcal:.0f} kcal. "
-                f"Proponujemy wypicie dodatkowego {supplement_name}u (smak neutralny), "
-                f"aby uzupełnić niedobory.",
+        "text": f"Brakuje Ci {missing['protein']:.1f}g białka i {missing['kcal']:.0f} kcal. "
+                f"Sugerujemy uzupełnienie: {supplement_name}.",
         "action_button": f"Zamów {supplement_name}",
-        "missing_nutrients": {
-            "kcal": round(missing.kcal, 1),
-            "protein": round(missing.protein, 1),
-        },
+        "missing_nutrients": missing,
     }
+
+

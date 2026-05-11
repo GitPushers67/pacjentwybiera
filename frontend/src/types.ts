@@ -64,11 +64,11 @@ export interface PatientProfile {
   allergens: string[];
 }
 
-export type EatenStatus = 'none' | 'full';
+export type EatenStatus = 'none' | 'full' | 'partial';
 
 export type Screen =
   | 'onboarding' | 'home' | 'plan' | 'order' | 'add-sym' | 'profile'
-  | 'confirm' | 'welcome' | 'allergens' | 'nutrition';
+  | 'confirm' | 'welcome' | 'allergens' | 'nutrition' | 'waste-analysis';
 
 export type SymptomKey =
   | 'nausea' | 'taste' | 'diarrhea' | 'mouth' | 'const'

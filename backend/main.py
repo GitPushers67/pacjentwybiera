@@ -6,29 +6,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
 from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from config import settings
 from logmeal import router as logmeal_router
-
-
-class Settings(BaseSettings):
-    mongo_url: str = "mongodb://localhost:27017"
-    chroma_host: str = "localhost"
-    chroma_port: int = 8000
-    cors_origins: list[str] = Field(default_factory=list)
-    logmeal_api_key: str = ""
-    logmeal_url: str = "https://api.logmeal.es/v2/nutrition/recipe/nutritional_info"
-
-    model_config = SettingsConfigDict(extra="ignore")
-
-    @field_validator("cors_origins", mode="before")
-    @classmethod
-    def parse_cors_origins(cls, value):
-        if value is None:
-            return []
-        if isinstance(value, str):
-            return [item.strip() for item in value.split(",") if item.strip()]
-        return value
-
-settings = Settings()
 
 
 @asynccontextmanager

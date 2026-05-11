@@ -11,6 +11,7 @@ import WelcomeScreen from './screens/WelcomeScreen';
 import AllergensScreen from './screens/AllergensScreen';
 import NutritionScreen from './screens/NutritionScreen';
 import OnboardingScreen from './screens/OnboardingScreen';
+import WasteAnalysisScreen from './screens/WasteAnalysisScreen';
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>('onboarding');
@@ -90,6 +91,14 @@ export default function App() {
             />
           )}
           {screen === 'confirm' && <ConfirmScreen navigate={navigate} />}
+          {screen === 'waste-analysis' && (
+            <WasteAnalysisScreen
+              navigate={navigate}
+              mealName={orderMeals?.[0]?.title}
+              calories={orderMeals?.[0]?.options[choices['0'] || 0]?.kcal}
+              protein={orderMeals?.[0]?.options[choices['0'] || 0]?.protein}
+            />
+          )}
         </div>
       </div>
     </IonApp>

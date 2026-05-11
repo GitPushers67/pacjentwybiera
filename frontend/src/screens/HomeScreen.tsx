@@ -43,32 +43,54 @@ function CameraButton({ camState, onPress }: { camState: CamState; onPress: () =
 }
 
 function EatenToggle({ value, onChange }: { value: EatenStatus; onChange: (v: EatenStatus) => void }) {
-  const eaten = value === 'full';
+  const getColor = () => {
+    if (value === 'full') return 'var(--green)';
+    if (value === 'partial') return 'var(--amber)';
+    return 'var(--red)';
+  };
+
+  const getLabel = () => {
+    if (value === 'full') return 'Zjedzone';
+    if (value === 'partial') return 'Częściowo';
+    return 'Nie zjedzone';
+  };
+
+  const handleClick = () => {
+    const cycle: EatenStatus[] = ['full', 'partial', 'none'];
+    const idx = cycle.indexOf(value);
+    const next = cycle[(idx + 1) % cycle.length];
+    onChange(next);
+  };
+
   return (
     <button
-      onClick={() => onChange(eaten ? 'none' : 'full')}
+      onClick={handleClick}
       style={{
-        background: eaten ? 'var(--green)' : 'var(--red)',
+        background: getColor(),
         border: 'none',
         borderRadius: 22,
         padding: '7px 13px',
         cursor: 'pointer',
-        display: 'flex', alignItems: 'center', gap: 5,
+        display: 'flex',
+        alignItems: 'center',
+        gap: 5,
         flexShrink: 0,
-        boxShadow: eaten
-          ? '0 2px 8px rgba(45,125,90,0.35)'
-          : '0 2px 8px rgba(192,57,43,0.35)',
+        boxShadow: `0 2px 8px ${getColor()}50`,
+        transition: 'all 0.2s',
       }}
     >
-      <i className={`ti ${eaten ? 'ti-check' : 'ti-x'}`} style={{ fontSize: 12, color: '#fff' }} />
+      <i
+        className={`ti ${value === 'full' ? 'ti-check' : value === 'partial' ? 'ti-minus' : 'ti-x'}`}
+        style={{ fontSize: 12, color: '#fff' }}
+      />
       <span style={{ fontSize: 11, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap' }}>
-        {eaten ? 'Zjedzone' : 'Nie zjedzone'}
+        {getLabel()}
       </span>
     </button>
   );
 }
 
-function MealCard({ meal, isCurrent, choices, status, camState, onEaten, onCamera }: {
+function MealCard({ meal, isCurrent, choices, status, camState, onEaten, onCamera, onPartial }: {
   meal: Meal;
   isCurrent?: boolean;
   choices: Record<string, number>;
@@ -76,22 +98,37 @@ function MealCard({ meal, isCurrent, choices, status, camState, onEaten, onCamer
   camState: CamState;
   onEaten: (v: EatenStatus) => void;
   onCamera: () => void;
+  onPartial: () => void;
 }) {
   const opt = getOption(meal, choices[meal.id] ?? 0);
+  
+  const handleEatenChange = (v: EatenStatus) => {
+    onEaten(v);
+    if (v === 'partial') {
+      setTimeout(() => onPartial(), 0);
+    }
+  };
+  
   return (
-    <div className={`hmc ${isCurrent ? 'hmc-current ' : ''}${status === 'full' ? 'hmc-eaten' : 'hmc-not-eaten'}`}>
+    <div className={`hmc ${isCurrent ? 'hmc-current ' : ''}${status === 'full' ? 'hmc-eaten' : status === 'partial' ? 'hmc-partial' : 'hmc-not-eaten'}`}>
       <div className="hmc-top">
         <div className="hmc-info">
           <div className="hmc-type">{meal.title} · {meal.time}</div>
           <div className="hmc-name">{opt.name}</div>
         </div>
-        <EatenToggle value={status} onChange={onEaten} />
+        <EatenToggle value={status} onChange={handleEatenChange} />
       </div>
       <div style={{ display: 'flex', gap: 5, marginBottom: 8, flexWrap: 'wrap', alignItems: 'center' }}>
         <span className="tag b">{opt.protein}g białka</span>
         <span className="tag o">{opt.kcal} kcal</span>
       </div>
-      <CameraButton camState={camState} onPress={onCamera} />
+      {status !== 'partial' ? (
+        <CameraButton camState={camState} onPress={onCamera} />
+      ) : (
+        <div style={{ fontSize: 12, color: 'var(--amber)', fontWeight: 600 }}>
+          ⏳ Oczekuje na zdjęcie...
+        </div>
+      )}
     </div>
   );
 }
@@ -122,6 +159,12 @@ export default function HomeScreen({ navigate, symptoms, setSymptoms, choices, e
   const now = useNow();
   const timerRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
 
+  // Waste analysis upload
+  const [uploadMealId, setUploadMealId] = useState<string | null>(null);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploadLoading, setUploadLoading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const today = useMemo(() => getToday(), []);
 
   useEffect(() => () => { timerRefs.current.forEach(clearTimeout); }, []);
@@ -147,6 +190,94 @@ export default function HomeScreen({ navigate, symptoms, setSymptoms, choices, e
       timerRefs.current.push(t2);
     }, 2200);
     timerRefs.current.push(t1);
+  };
+
+  // Obsługa uploadu zdjęcia dla analizy resztek
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file && uploadMealId) {
+      console.log('📸 Wybrany plik:', file.name, 'dla posiłku:', uploadMealId);
+      setSelectedFile(file);
+      handleUploadAnalysis(file);
+    }
+  };
+
+  const handleUploadAnalysis = async (file: File) => {
+    if (!uploadMealId) return;
+
+    setUploadLoading(true);
+    const meal = meals.find(m => m.id === uploadMealId);
+    if (!meal) return;
+
+    const opt = getOption(meal, choices[uploadMealId] ?? 0);
+
+    try {
+      // Parsuj weight z formatu "221g" → 221
+      const weightStr = opt.weight?.replace(/[^0-9.]/g, '') || '300';
+      const weightGrams = parseFloat(weightStr);
+
+      // Uproszczenie składników na kluczowe słowa
+      const ingredientsList = (opt.ingredients || '')
+        .split(',')
+        .map(i => i.trim())
+        .slice(0, 10)
+        .join(',');
+
+      const formData = new FormData();
+      formData.append('image', file);
+      // Wysyłamy składniki jako class_constraints zamiast dish_name
+      formData.append('class_constraints', ingredientsList);
+      formData.append('calories_kcal', String(opt.kcal));
+      formData.append('protein_grams', String(opt.protein));
+      formData.append('fat_grams', String(opt.fat));
+      formData.append('carbs_grams', String(opt.carbs));
+      formData.append('weight_grams', String(weightGrams)); // Realna waga z menu
+      formData.append('reference_weight', String(weightGrams)); // Dla LogMeal
+      formData.append('reference_object', 'true'); // Włącz detekcję widelca
+
+      console.log('📋 Parametry przesyłane:', {
+        dish: opt.name,
+        weight_grams: weightGrams,
+        class_constraints: ingredientsList,
+        calories: opt.kcal,
+        protein: opt.protein,
+      });
+
+      const response = await fetch('http://localhost:8000/api/logmeal/analyze', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ API error:', response.status, errorText);
+        throw new Error(`API error: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log('✅ Odpowiedź z backendu:', data);
+
+      // ✅ Obsługa fallback mode (LogMeal nie rozpoznał resztek)
+      if (data.error === 'unrecognized_image') {
+        console.warn('⚠️ FALLBACK MODE:', data.message);
+        console.warn('📝 Prosimy o ręczne określenie procent zjedzenia');
+        return;
+      }
+
+      // ✅ Normalny flow - LogMeal rozpoznał resztki
+      console.log('📊 Analiza zjedzenia:', {
+        consumed_percent: data.analysis?.consumed_percent,
+        missing_nutrients: data.analysis?.missing_nutrients,
+        recommendation: data.recommendation,
+      });
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : 'Nieznany błąd';
+      console.error('❌ Błąd podczas analizy:', errorMsg);
+    } finally {
+      setUploadLoading(false);
+      setUploadMealId(null);
+      setSelectedFile(null);
+    }
   };
 
   const currentMealId = getCurrentMealId();
@@ -240,6 +371,7 @@ export default function HomeScreen({ navigate, symptoms, setSymptoms, choices, e
             camState={cameraMap[meal.id] ?? 'idle'}
             onEaten={(v) => setEatenMap(prev => ({ ...prev, [meal.id]: v }))}
             onCamera={() => triggerCamera(meal.id)}
+            onPartial={() => { setUploadMealId(meal.id); fileInputRef.current?.click(); }}
           />
         ))}
 
@@ -256,6 +388,7 @@ export default function HomeScreen({ navigate, symptoms, setSymptoms, choices, e
             camState={cameraMap[meal.id] ?? 'idle'}
             onEaten={(v) => setEatenMap(prev => ({ ...prev, [meal.id]: v }))}
             onCamera={() => triggerCamera(meal.id)}
+            onPartial={() => { setUploadMealId(meal.id); fileInputRef.current?.click(); }}
           />
         ))}
 
@@ -273,6 +406,15 @@ export default function HomeScreen({ navigate, symptoms, setSymptoms, choices, e
           onRemove={() => { setSymptoms(symptoms.filter((s) => s !== modalSym)); setModalSym(null); }}
         />
       )}
+
+      {/* Hidden file input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png"
+        onChange={handleFileSelect}
+        style={{ display: 'none' }}
+      />
 
       <Navbar active="home" navigate={navigate} />
     </div>

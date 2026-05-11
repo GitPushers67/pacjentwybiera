@@ -13,7 +13,8 @@ RUN pip install --no-cache-dir \
     openai \
     motor \
     pydantic-settings \
-    httpx
+    httpx \
+    python-multipart
 
 COPY . /app/
 RUN chmod +x /app/entrypoint.sh
