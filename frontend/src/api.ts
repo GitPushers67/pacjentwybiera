@@ -112,3 +112,20 @@ export async function listPatients(): Promise<PatientProfile[]> {
     typeof (p as PatientProfile).lastName === 'string'
   ));
 }
+
+export async function fetchAiRecommendation(payload: any): Promise<{
+  globalReason: string;
+  choices: Record<string, { choice: number; reason: string }>;
+} | null> {
+  try {
+    const res = await fetch('http://localhost:8000/api/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+}

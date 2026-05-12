@@ -541,6 +541,18 @@ ion-app {
   color: var(--green);
   font-weight: 600;
 }
+.card-label.ai-lbl {
+  background: rgba(43, 189, 184, 0.12); /* using var(--orange) roughly */
+}
+.card-label.ai-lbl i {
+  font-size: 10px;
+  color: var(--orange);
+}
+.card-label.ai-lbl span {
+  font-size: 10px;
+  color: var(--orange);
+  font-weight: 600;
+}
 .card-label.alt-lbl {
   background: rgba(232, 115, 42, 0.12);
 }

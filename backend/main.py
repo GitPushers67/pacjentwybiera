@@ -1,11 +1,13 @@
+import json
 from contextlib import asynccontextmanager
 
 import chromadb
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
-from pydantic import Field, field_validator
+from pydantic import BaseModel, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from openai import AsyncOpenAI
 
 
 class Settings(BaseSettings):
@@ -13,6 +15,7 @@ class Settings(BaseSettings):
     chroma_host: str = "localhost"
     chroma_port: int = 8000
     cors_origins: list[str] = Field(default_factory=list)
+    groq_api_key: str = ""
 
     model_config = SettingsConfigDict(extra="ignore")
 
@@ -53,3 +56,75 @@ app.add_middleware(
 @app.get("/")
 def root():
     return {"status": "ok"}
+
+
+class RecommendRequest(BaseModel):
+    patient: dict
+    symptoms: list[str]
+    symptomHistory: list[dict]
+    eatenMap: dict
+    activeMeals: list[dict]
+
+@app.post("/api/recommend")
+async def recommend_meals(req: RecommendRequest):
+    if not settings.groq_api_key:
+        raise HTTPException(status_code=500, detail="GROQ_API_KEY not set")
+
+    client = AsyncOpenAI(
+        api_key=settings.groq_api_key,
+        base_url="https://api.groq.com/openai/v1"
+    )
+
+    prompt = f"""
+Jesteś ekspertem dietetyki klinicznej wspierającym pacjentów onkologicznych.
+Zadanie: Wybierz najlepsze dania dla pacjenta na pojutrze, z dostępnych opcji dla poszczególnych posiłków.
+
+Dane pacjenta:
+{json.dumps(req.patient, ensure_ascii=False, indent=2)}
+
+Dzisiejsze objawy:
+{json.dumps(req.symptoms, ensure_ascii=False, indent=2)}
+
+Historia objawów:
+{json.dumps(req.symptomHistory, ensure_ascii=False, indent=2)}
+
+Spożycie posiłków dzisiaj (full = zjedzone, none = niezjedzone):
+{json.dumps(req.eatenMap, ensure_ascii=False, indent=2)}
+
+Dostępne posiłki do wyboru na pojutrze:
+{json.dumps(req.activeMeals, ensure_ascii=False, indent=2)}
+
+Zasady:
+1. Dla każdego posiłku (id w tablicy activeMeals) wybierz indeks opcji (0 lub 1), która będzie lepsza.
+2. Napisz krótkie (1-2 zdania) uzasadnienie dlaczego ta opcja została wybrana pod względem klinicznym.
+3. Napisz jedno ogólne uzasadnienie wyboru na cały dzień (globalReason).
+4. Zwróć DOKŁADNIE w formacie JSON (nic więcej):
+{{
+  "globalReason": "krótkie ogólne uzasadnienie decyzji na cały dzień",
+  "choices": {{
+    "breakfast": {{"choice": 0, "reason": "uzasadnienie dla śniadania"}},
+    "lunch2": {{"choice": 1, "reason": "uzasadnienie dla II śniadania"}},
+    ... pozostałe opcje
+  }}
+}}
+Pamiętaj o dopasowaniu kluczy w `choices` do odpowiednich id posiłków.
+    """
+
+    try:
+        response = await client.chat.completions.create(
+            model="llama-3.3-70b-versatile",
+            messages=[
+                {"role": "system", "content": "Jesteś asystentem zwracającym odpowiedzi tylko w formacie JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            response_format={"type": "json_object"}
+        )
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Groq API Error: {str(e)}")
+
+    result_text = response.choices[0].message.content
+    try:
+        data = json.loads(result_text)
+        return data
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="Failed to parse AI response")

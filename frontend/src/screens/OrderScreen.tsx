@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import Navbar from "../components/Navbar";
-import type { Screen, Meal } from "../types";
+import type { Screen, Meal, PatientProfile, SymptomHistoryEntry, EatenStatus } from "../types";
 import { meals as fallbackMeals } from "../data";
 import {
   getOption,
@@ -9,19 +9,24 @@ import {
   formatDateForAPI,
   formatDateLongPL,
 } from "../utils";
-import { fetchMenuForDate } from "../api";
+import { fetchMenuForDate, fetchAiRecommendation } from "../api";
 
 interface Props {
   navigate: (s: Screen) => void;
   choices: Record<string, number>;
   setChoices: (c: Record<string, number>) => void;
   setOrderMeals: (meals: Meal[] | null) => void;
+  patient: PatientProfile;
+  symptoms: string[];
+  symptomHistory: SymptomHistoryEntry[];
+  eatenMap: Record<string, EatenStatus>;
 }
 
 interface SlotProps {
   meal: Meal;
   optionIdx: number;
   onFlip: (dir: 1 | -1) => void;
+  aiReason?: string;
 }
 
 function ScoreRing({ score }: { score: number }) {
@@ -71,7 +76,7 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
-function MealSlot({ meal, optionIdx, onFlip }: SlotProps) {
+function MealSlot({ meal, optionIdx, onFlip, aiReason }: SlotProps) {
   const opt = getOption(meal, optionIdx);
   const isRec = opt.isRec;
   const cardRef = useRef<HTMLDivElement>(null);
@@ -204,11 +209,11 @@ function MealSlot({ meal, optionIdx, onFlip }: SlotProps) {
                   marginBottom: 10,
                 }}
               >
-                <div className={`card-label ${isRec ? "rec-lbl" : "alt-lbl"}`}>
+                <div className={`card-label ${aiReason ? "ai-lbl" : isRec ? "rec-lbl" : "alt-lbl"}`}>
                   <i
-                    className={`ti ${isRec ? "ti-star" : "ti-arrows-exchange"}`}
+                    className={`ti ${aiReason ? "ti-brain" : isRec ? "ti-star" : "ti-arrows-exchange"}`}
                   />
-                  <span>{isRec ? "Rekomendowane" : "Alternatywa"}</span>
+                  <span>{aiReason ? "Wybór AI" : isRec ? "Rekomendowane" : "Alternatywa"}</span>
                 </div>
                 <div
                   style={{
@@ -268,7 +273,7 @@ function MealSlot({ meal, optionIdx, onFlip }: SlotProps) {
                 <span>Uzasadnienie</span>
               </div>
               <div className={`card-why ${isRec ? "green" : "orange"}`}>
-                {opt.why}
+                {aiReason || opt.why}
               </div>
               <div className="card-tags">
                 {opt.tags.map((tag) => (
@@ -299,10 +304,17 @@ export default function OrderScreen({
   choices,
   setChoices,
   setOrderMeals,
+  patient,
+  symptoms,
+  symptomHistory,
+  eatenMap,
 }: Props) {
   const [apiMeals, setApiMeals] = useState<Meal[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [aiApplied, setAiApplied] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiReasons, setAiReasons] = useState<Record<string, string>>({});
+  const [globalAiReason, setGlobalAiReason] = useState<string | null>(null);
 
   const orderDate = useMemo(() => getOrderableDate(), []);
   const orderDateStr = useMemo(() => formatDateForAPI(orderDate), [orderDate]);
@@ -325,15 +337,42 @@ export default function OrderScreen({
   const flip = (mealId: string, dir: 1 | -1) => {
     setChoices({ ...choices, [mealId]: (choices[mealId] ?? 0) + dir });
     setAiApplied(false);
+    if (aiReasons[mealId]) {
+      const newAiReasons = { ...aiReasons };
+      delete newAiReasons[mealId];
+      setAiReasons(newAiReasons);
+    }
   };
 
-  const applyAiRecommendation = () => {
-    const recommended: Record<string, number> = {};
-    activeMeals.forEach((meal) => {
-      recommended[meal.id] = 0;
-    });
-    setChoices(recommended);
-    setAiApplied(true);
+  const applyAiRecommendation = async () => {
+    setIsAiLoading(true);
+    const payload = {
+      patient,
+      symptoms,
+      symptomHistory,
+      eatenMap,
+      activeMeals,
+    };
+    
+    const result = await fetchAiRecommendation(payload);
+    setIsAiLoading(false);
+    
+    if (result) {
+      const newChoices: Record<string, number> = {};
+      const newReasons: Record<string, string> = {};
+      
+      for (const [mealId, data] of Object.entries(result.choices)) {
+        newChoices[mealId] = data.choice;
+        newReasons[mealId] = data.reason;
+      }
+      
+      setChoices({ ...choices, ...newChoices });
+      setAiReasons(newReasons);
+      setGlobalAiReason(result.globalReason);
+      setAiApplied(true);
+    } else {
+      alert("Błąd podczas pobierania rekomendacji z serwera.");
+    }
   };
 
   const totalProtein = activeMeals.reduce(
@@ -371,8 +410,7 @@ export default function OrderScreen({
           </span>
         </div>
         <p>
-          Nudności słabną, wrażliwość żołądka utrzymuje się. Model zaleca dania
-          chłodne, lekkostrawne, wysokobiałkowe.
+          {globalAiReason || "Nudności słabną, wrażliwość żołądka utrzymuje się. Model zaleca dania chłodne, lekkostrawne, wysokobiałkowe."}
         </p>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div className="diet-pill">
@@ -420,12 +458,13 @@ export default function OrderScreen({
               gap: 5,
             }}
             onClick={applyAiRecommendation}
+            disabled={isAiLoading}
           >
             <i
-              className={`ti ${aiApplied ? "ti-check" : "ti-brain"}`}
+              className={`ti ${isAiLoading ? "ti-loader-2 cam-spin" : aiApplied ? "ti-check" : "ti-brain"}`}
               style={{ fontSize: 14 }}
             />
-            {aiApplied ? "Zastosowano" : "Rekomendacja AI"}
+            {isAiLoading ? "Pobieranie..." : aiApplied ? "Zastosowano" : "Rekomendacja AI"}
           </button>
         </div>
 
@@ -473,6 +512,7 @@ export default function OrderScreen({
                 meal={meal}
                 optionIdx={choices[meal.id] ?? 0}
                 onFlip={(dir) => flip(meal.id, dir)}
+                aiReason={aiReasons[meal.id]}
               />
             ))}
 
