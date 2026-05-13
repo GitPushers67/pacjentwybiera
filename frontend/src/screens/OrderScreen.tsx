@@ -31,9 +31,7 @@ interface SlotProps {
 }
 
 
-function CardContent({ opt, flipped, aiChoice, isAiSelected, aiReason, optionIdx }: any) {
-  const isLeftSwipe = optionIdx === 0;
-
+function CardContent({ opt, flipped, aiChoice, isAiSelected, aiReason }: any) {
   return (
     <div className={`card-inner${flipped ? " flipped" : ""}`}>
       {/* PRZÓD */}
