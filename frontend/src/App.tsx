@@ -98,7 +98,7 @@ export default function App() {
               orderMeals={orderMeals}
             />
           )}
-          {screen === "order" && (
+          {screen === "order" && patient && (
             <OrderScreen
               navigate={navigate}
               choices={choices}

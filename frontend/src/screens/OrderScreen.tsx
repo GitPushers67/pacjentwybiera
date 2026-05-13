@@ -30,52 +30,6 @@ interface SlotProps {
   aiChoice?: number;
 }
 
-function ScoreRing({ score }: { score: number }) {
-  const r = 14;
-  const circ = 2 * Math.PI * r;
-  const filled = circ * (score / 10);
-  const color =
-    score >= 8 ? "var(--green)" : score >= 6 ? "var(--amber)" : "var(--red)";
-  return (
-    <div style={{ position: "relative", width: 36, height: 36, flexShrink: 0 }}>
-      <svg width="36" height="36" viewBox="0 0 36 36">
-        <circle
-          cx="18"
-          cy="18"
-          r={r}
-          fill="none"
-          stroke="rgba(255,255,255,0.3)"
-          strokeWidth="3"
-        />
-        <circle
-          cx="18"
-          cy="18"
-          r={r}
-          fill="none"
-          stroke={color}
-          strokeWidth="3"
-          strokeDasharray={`${filled} ${circ}`}
-          strokeLinecap="round"
-          transform="rotate(-90 18 18)"
-        />
-      </svg>
-      <div
-        style={{
-          position: "absolute",
-          inset: 0,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          fontSize: 11,
-          fontWeight: 700,
-          color,
-        }}
-      >
-        {score}
-      </div>
-    </div>
-  );
-}
 
 function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
   const opt = getOption(meal, optionIdx);
