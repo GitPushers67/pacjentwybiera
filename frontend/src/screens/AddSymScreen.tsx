@@ -2,6 +2,7 @@ import { useState, type Dispatch, type SetStateAction } from "react";
 import SymptomModal from "../components/SymptomModal";
 import Navbar from "../components/Navbar";
 import type { Screen, SymptomHistoryEntry } from "../types";
+import TopbarDate from "../components/TopbarDate";
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -9,6 +10,12 @@ interface Props {
   setSymptoms: (s: string[]) => void;
   symptomHistory: SymptomHistoryEntry[];
   setSymptomHistory: Dispatch<SetStateAction<SymptomHistoryEntry[]>>;
+}
+
+function scaleLbl(v: number) {
+  if (v >= 67) return 'Bardzo silny';
+  if (v >= 34) return 'Silny';
+  return 'Słaby';
 }
 
 const ALL_SYMPTOMS = [
@@ -33,6 +40,11 @@ export default function AddSymScreen({
   const [modalSym, setModalSym] = useState<string | null>(null);
   const [symIntensity, setSymIntensity] = useState<Record<string, number>>({});
   const [symNotes, setSymNotes] = useState<Record<string, string>>({});
+
+  const [showCustomModal, setShowCustomModal] = useState(false);
+  const [customName, setCustomName] = useState("");
+  const [customIntensity, setCustomIntensity] = useState(50);
+  const [customNote, setCustomNote] = useState("");
 
   const openSym = (key: string) => {
     if (symIntensity[key] === undefined) {
@@ -67,6 +79,26 @@ export default function AddSymScreen({
     }
   };
 
+  const saveCustom = () => {
+    const name = customName.trim();
+    if (!name) return;
+    const key = `custom_${name}`;
+    setSymptomHistory((prev) => [
+      {
+        key,
+        addedAt: new Date().toISOString(),
+        scale: customIntensity,
+        note: customNote.trim() || undefined,
+      },
+      ...prev,
+    ]);
+    if (!symptoms.includes(key)) setSymptoms([...symptoms, key]);
+    setShowCustomModal(false);
+    setCustomName("");
+    setCustomIntensity(50);
+    setCustomNote("");
+  };
+
   const activeSym = ALL_SYMPTOMS.find((s) => s.key === modalSym);
 
   return (
@@ -76,15 +108,15 @@ export default function AddSymScreen({
           <h1>Dodaj objaw</h1>
           <p>Kliknij objaw, aby zapisać do historii</p>
         </div>
-        <button
-          style={{ background: "none", border: "none", cursor: "pointer" }}
-          onClick={() => navigate("home")}
-        >
-          <i
-            className="ti ti-x"
-            style={{ fontSize: 20, color: "var(--text2)" }}
-          />
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+          <TopbarDate />
+          <button
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            onClick={() => navigate("home")}
+          >
+            <i className="ti ti-x" style={{ fontSize: 20, color: "var(--text2)" }} />
+          </button>
+        </div>
       </div>
 
       <div className="scroll" style={{ paddingBottom: 92 }}>
@@ -96,6 +128,33 @@ export default function AddSymScreen({
             </div>
           ))}
         </div>
+
+        <button
+          onClick={() => setShowCustomModal(true)}
+          style={{
+            width: "100%",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: 7,
+            padding: "11px 0",
+            marginBottom: 12,
+            background: "var(--card)",
+            border: "1.5px dashed var(--border)",
+            borderRadius: 13,
+            cursor: "pointer",
+          }}
+        >
+          <i
+            className="ti ti-plus"
+            style={{ fontSize: 15, color: "var(--text3)" }}
+          />
+          <span
+            style={{ fontSize: 12, fontWeight: 600, color: "var(--text2)" }}
+          >
+            Inny objaw
+          </span>
+        </button>
 
         <div style={{ marginTop: 18 }}>
           <div
@@ -125,6 +184,11 @@ export default function AddSymScreen({
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {symptomHistory.map((entry, idx) => {
                 const symptom = ALL_SYMPTOMS.find((s) => s.key === entry.key);
+                const displayLabel =
+                  symptom?.label ??
+                  (entry.key.startsWith("custom_")
+                    ? entry.key.slice(7)
+                    : entry.key);
                 return (
                   <div
                     key={`${entry.key}-${entry.addedAt}-${idx}`}
@@ -162,7 +226,7 @@ export default function AddSymScreen({
                             color: "var(--text)",
                           }}
                         >
-                          {symptom?.label ?? entry.key}
+                          {displayLabel}
                         </span>
                         <span
                           style={{
@@ -184,7 +248,7 @@ export default function AddSymScreen({
                             padding: "1px 5px",
                           }}
                         >
-                          {entry.scale}%
+                          {scaleLbl(entry.scale)}
                         </span>
                         <span style={{ fontSize: 10, color: "var(--text3)" }}>
                           {new Date(entry.addedAt).toLocaleTimeString("pl-PL", {
@@ -241,6 +305,201 @@ export default function AddSymScreen({
           Gotowe
         </button>
       </div>
+      {showCustomModal && (
+        <>
+          <div
+            className="modal-backdrop"
+            onClick={() => setShowCustomModal(false)}
+          />
+          <div className="modal-sheet">
+            <div className="modal-handle" />
+            <div className="modal-header">
+              <div style={{ display: "flex", gap: 9, alignItems: "center" }}>
+                <div
+                  style={{
+                    width: 38,
+                    height: 38,
+                    borderRadius: "50%",
+                    background: "var(--olight)",
+                    border: "1px solid var(--omid)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <i
+                    className="ti ti-pencil-plus"
+                    style={{ fontSize: 18, color: "var(--orange)" }}
+                  />
+                </div>
+                <span
+                  style={{
+                    fontSize: 16,
+                    fontWeight: 700,
+                    color: "var(--text)",
+                  }}
+                >
+                  Inny objaw
+                </span>
+              </div>
+              <button
+                className="modal-close"
+                onClick={() => setShowCustomModal(false)}
+              >
+                <i className="ti ti-x" style={{ fontSize: 14 }} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "var(--text)",
+                  marginBottom: 8,
+                }}
+              >
+                Nazwa objawu
+              </div>
+              <input
+                type="text"
+                value={customName}
+                onChange={(e) => setCustomName(e.target.value)}
+                placeholder="Np. Ból pleców, Duszność, Obrzęk..."
+                autoFocus
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  border: "1px solid var(--border)",
+                  borderRadius: 11,
+                  padding: "9px 10px",
+                  fontSize: 13,
+                  color: "var(--text)",
+                  background: "#fff",
+                  outline: "none",
+                }}
+              />
+            </div>
+
+            <div style={{ marginBottom: 16 }}>
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  alignItems: "baseline",
+                  marginBottom: 10,
+                }}
+              >
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 600,
+                    color: "var(--text)",
+                  }}
+                >
+                  Nasilenie objawu
+                </span>
+                <span
+                  style={{
+                    fontSize: 13,
+                    fontWeight: 700,
+                    color:
+                      customIntensity >= 67
+                        ? "var(--red)"
+                        : customIntensity >= 34
+                          ? "var(--amber)"
+                          : "var(--green)",
+                  }}
+                >
+                  {scaleLbl(customIntensity)}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={customIntensity}
+                onChange={(e) => setCustomIntensity(Number(e.target.value))}
+                className="wellbeing-range"
+              />
+              <div
+                style={{
+                  display: "flex",
+                  justifyContent: "space-between",
+                  marginTop: 5,
+                }}
+              >
+                <span style={{ fontSize: 10, color: "var(--text3)" }}>0%</span>
+                <span style={{ fontSize: 10, color: "var(--text3)" }}>
+                  100%
+                </span>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: 18 }}>
+              <div
+                style={{
+                  fontSize: 13,
+                  fontWeight: 600,
+                  color: "var(--text)",
+                  marginBottom: 8,
+                }}
+              >
+                Notatka
+              </div>
+              <textarea
+                value={customNote}
+                onChange={(e) => setCustomNote(e.target.value)}
+                placeholder="Opcjonalny opis objawu..."
+                rows={3}
+                style={{
+                  width: "100%",
+                  boxSizing: "border-box",
+                  border: "1px solid var(--border)",
+                  borderRadius: 11,
+                  padding: "9px 10px",
+                  fontSize: 12,
+                  color: "var(--text)",
+                  resize: "vertical",
+                  background: "#fff",
+                }}
+              />
+            </div>
+
+            <div style={{ display: "flex", gap: 10 }}>
+              <button
+                onClick={() => setShowCustomModal(false)}
+                style={{
+                  flex: 1,
+                  padding: "11px 0",
+                  background: "var(--bg)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 11,
+                  color: "var(--text2)",
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: "pointer",
+                }}
+              >
+                Anuluj
+              </button>
+              <button
+                className="orange-btn"
+                style={{
+                  flex: 2,
+                  margin: 0,
+                  opacity: customName.trim() ? 1 : 0.45,
+                }}
+                onClick={saveCustom}
+              >
+                Dodaj objaw
+              </button>
+            </div>
+          </div>
+        </>
+      )}
+
       {modalSym && activeSym && (
         <SymptomModal
           symptom={activeSym}

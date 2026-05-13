@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar';
 import type { Screen, EatenStatus, PatientProfile } from '../types';
 import { meals, getDailyTargets } from '../data';
 import { getOption } from '../utils';
+import TopbarDate from '../components/TopbarDate';
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -133,10 +134,8 @@ export default function NutritionScreen({ navigate, choices, eatenMap, patient }
   return (
     <div className="screen active">
       <div className="topbar">
-        <div>
-          <h1>Odżywianie</h1>
-          <p>środa, 7 maja 2026</p>
-        </div>
+        <div><h1>Odżywianie</h1></div>
+        <TopbarDate />
       </div>
 
       <div className="nutrition-tabs">

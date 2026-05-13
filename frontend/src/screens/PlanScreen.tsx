@@ -7,6 +7,7 @@ import {
   getOption,
 } from '../utils';
 import { fetchMenuForDate } from '../api';
+import TopbarDate from '../components/TopbarDate';
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -31,6 +32,49 @@ const BADGE_ICON: Record<string, string> = {
   oczekuje:       'ti-clock',
   wkrótce:        'ti-lock',
   rekomendowane:  'ti-star',
+};
+
+const BADGE_LABEL: Record<string, string> = {
+  'zjedzone':      'Zjedzone',
+  'częściowo':     'Częściowo zjedzone',
+  'nie zjedzone':  'Niezjedzone',
+  'zamówiono':     'Zamówiono',
+  'wybrane':       'Wybrane',
+  'oczekuje':      'Oczekuje',
+  'wkrótce':       'Wkrótce',
+  'rekomendowane': 'Rekomendowane',
+};
+
+type PastBadge = { badge: string; bc: 'g' | 'o' | '' };
+
+const PAST_DAY_BADGES: Record<number, PastBadge[]> = {
+  [-1]: [
+    { badge: 'zjedzone',     bc: 'g' },
+    { badge: 'zjedzone',     bc: 'g' },
+    { badge: 'częściowo',    bc: 'o' },
+    { badge: 'zjedzone',     bc: 'g' },
+    { badge: 'nie zjedzone', bc: ''  },
+    { badge: 'zjedzone',     bc: 'g' },
+    { badge: 'zjedzone',     bc: 'g' },
+  ],
+  [-2]: [
+    { badge: 'zjedzone',     bc: 'g' },
+    { badge: 'częściowo',    bc: 'o' },
+    { badge: 'zjedzone',     bc: 'g' },
+    { badge: 'zjedzone',     bc: 'g' },
+    { badge: 'zjedzone',     bc: 'g' },
+    { badge: 'nie zjedzone', bc: ''  },
+    { badge: 'zjedzone',     bc: 'g' },
+  ],
+  [-3]: [
+    { badge: 'zjedzone',     bc: 'g' },
+    { badge: 'zjedzone',     bc: 'g' },
+    { badge: 'nie zjedzone', bc: ''  },
+    { badge: 'zjedzone',     bc: 'g' },
+    { badge: 'częściowo',    bc: 'o' },
+    { badge: 'zjedzone',     bc: 'g' },
+    { badge: 'zjedzone',     bc: 'g' },
+  ],
 };
 
 const TREATMENT_SESSIONS = [
@@ -61,6 +105,7 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
   const [selectedOffset, setSelectedOffset] = useState(0);
   const [fetchedMeals, setFetchedMeals] = useState<Record<number, Meal[] | null>>({});
   const [showTreatments, setShowTreatments] = useState(false);
+  const [expandedMacros, setExpandedMacros] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     [-3, -2, -1, 0, 1].forEach((offset) => {
@@ -69,6 +114,18 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
       );
     });
   }, [today]);
+
+  useEffect(() => {
+    setExpandedMacros(new Set());
+  }, [selectedOffset]);
+
+  function toggleMacro(type: string) {
+    setExpandedMacros((prev) => {
+      const next = new Set(prev);
+      next.has(type) ? next.delete(type) : next.add(type);
+      return next;
+    });
+  }
 
   const dayEntries = useMemo(() =>
     Array.from({ length: 7 }, (_, i) => {
@@ -96,7 +153,11 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
         label: PAST_LABELS[selectedOffset],
         sub: formatDateShortPL(selectedDate),
         meals: meals
-          ? apiMealsToPlanMeals(meals, 'zjedzone', 'g')
+          ? meals.map((m, i) => {
+              const opt = m.options[0];
+              const { badge, bc } = PAST_DAY_BADGES[selectedOffset]?.[i] ?? { badge: 'zjedzone', bc: 'g' as const };
+              return { emoji: opt.emoji, type: m.title, name: opt.name, kcal: opt.kcal, protein: opt.protein, carbs: opt.carbs, fat: opt.fat, badge, bc };
+            })
           : [],
       };
     }
@@ -176,6 +237,7 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
     <div className="screen active">
       <div className="topbar">
         <div><h1>Plan posiłków</h1></div>
+        <TopbarDate />
       </div>
 
       {/* ── 7-day bar ─────────────────────────────────────── */}
@@ -348,17 +410,39 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
                 <div className="cmi-type">{m.type}</div>
                 <div className="cmi-name">{m.name}</div>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 5, flexShrink: 0 }}>
-                {BADGE_ICON[m.badge] && (
-                  <i className={`ti ${BADGE_ICON[m.badge]}`} style={{
-                    fontSize: 11,
-                    color: m.bc === 'g' ? 'var(--green)' : m.bc === 'o' ? 'var(--orange)' : 'var(--text3)',
-                  }} />
+              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  {BADGE_ICON[m.badge] && (
+                    <i className={`ti ${BADGE_ICON[m.badge]}`} style={{
+                      fontSize: 11,
+                      color: m.bc === 'g' ? 'var(--green)' : m.bc === 'o' ? 'var(--orange)' : 'var(--text3)',
+                    }} />
+                  )}
+                  <span className={`cmi-badge ${m.bc}`}>{BADGE_LABEL[m.badge] ?? m.badge}</span>
+                </div>
+                {m.kcal > 0 && (
+                  <button
+                    onClick={() => toggleMacro(m.type)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      width: 33, height: 33, borderRadius: 9, cursor: 'pointer',
+                      border: expandedMacros.has(m.type) ? '1.5px solid var(--omid)' : '1.5px solid var(--border)',
+                      background: expandedMacros.has(m.type) ? 'var(--olight)' : 'var(--bg)',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    <i
+                      className="ti ti-chart-bar"
+                      style={{
+                        fontSize: 19,
+                        color: expandedMacros.has(m.type) ? 'var(--orange)' : 'var(--text3)',
+                      }}
+                    />
+                  </button>
                 )}
-                <span className={`cmi-badge ${m.bc}`}>{m.badge}</span>
               </div>
             </div>
-            {m.kcal > 0 && (
+            {m.kcal > 0 && expandedMacros.has(m.type) && (
               <div className="cmi-macros">
                 {[
                   { val: m.kcal,    lbl: 'kcal',   cls: 'mc-kcal' },
