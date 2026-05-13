@@ -106,6 +106,10 @@ export default function App() {
               choices={choices}
               setChoices={setChoices}
               setOrderMeals={setOrderMeals}
+              patient={patient}
+              symptoms={symptoms}
+              symptomHistory={symptomHistory}
+              eatenMap={eatenMap}
             />
           )}
           {screen === "add-sym" && (

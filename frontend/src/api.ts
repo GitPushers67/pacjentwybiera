@@ -56,9 +56,9 @@ function mapDish(dish: any, isRec: boolean, slotIcon: string) {
 export async function fetchMenuForDate(dateStr: string): Promise<Meal[] | null> {
   const url = new URL(API_BASE);
   url.searchParams.set('dietId',                '2388');
-  url.searchParams.set('dietVariantId',         '4196');
-  url.searchParams.set('dietVariantCaloriesId', '15759');
-  url.searchParams.set('menuScheduleId',        '7274');
+  url.searchParams.set('dietVariantId',         '4881');
+  url.searchParams.set('dietVariantCaloriesId', '18414');
+  url.searchParams.set('menuScheduleId',        '7354');
   url.searchParams.set('menuDateAsString',      dateStr);
 
   try {
@@ -111,4 +111,21 @@ export async function listPatients(): Promise<PatientProfile[]> {
     typeof (p as PatientProfile).firstName === 'string' &&
     typeof (p as PatientProfile).lastName === 'string'
   ));
+}
+
+export async function fetchAiRecommendation(payload: any): Promise<{
+  globalReason: string;
+  choices: Record<string, { choice: number; reason: string }>;
+} | null> {
+  try {
+    const res = await fetch('http://localhost:8000/api/recommend', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
 }
