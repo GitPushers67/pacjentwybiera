@@ -101,11 +101,11 @@ body {
 }
 
 .ion-page {
-  background: var(--bg) !important;
+  background: transparent !important;
 }
 
 ion-app {
-  background: var(--bg);
+  background: transparent;
 }
 
 .app-wrap {
@@ -133,7 +133,7 @@ ion-app {
 }
 
 .phone {
-  background: var(--bg);
+  background: linear-gradient(rgba(240, 248, 248, 0.68), rgba(240, 248, 248, 0.68)), url('./assets/background.png') center/cover no-repeat;
   width: 100%;
   max-width: 390px;
   height: 100%;
@@ -450,13 +450,16 @@ ion-app {
   flex: 1;
 }
 .slot-title {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 15px;
+  font-weight: 800;
   color: var(--text);
+  text-shadow: 0 1px 6px rgba(255, 255, 255, 0.9), 0 0 12px rgba(255, 255, 255, 0.9);
 }
 .slot-time {
-  font-size: 11px;
-  color: var(--text2);
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text);
+  text-shadow: 0 1px 6px rgba(255, 255, 255, 0.9), 0 0 12px rgba(255, 255, 255, 0.9);
 }
 
 .slot-status {
