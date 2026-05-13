@@ -27,6 +27,7 @@ interface SlotProps {
   optionIdx: number;
   onFlip: (dir: 1 | -1) => void;
   aiReason?: string;
+  aiChoice?: number;
 }
 
 function ScoreRing({ score }: { score: number }) {
@@ -76,9 +77,11 @@ function ScoreRing({ score }: { score: number }) {
   );
 }
 
-function MealSlot({ meal, optionIdx, onFlip, aiReason }: SlotProps) {
+function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
   const opt = getOption(meal, optionIdx);
-  const isRec = opt.isRec;
+  const isAiSelected = aiChoice !== undefined && optionIdx === aiChoice;
+  const isAiAlternative = aiChoice !== undefined && optionIdx !== aiChoice;
+  
   const cardRef = useRef<HTMLDivElement>(null);
   const startX = useRef(0);
   const startY = useRef(0);
@@ -178,9 +181,11 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason }: SlotProps) {
           <div className="slot-title">{meal.title}</div>
           <div className="slot-time">{meal.time}</div>
         </div>
-        <div className={`slot-status ${isRec ? "done" : "alt"}`}>
-          <i className={`ti ${isRec ? "ti-check" : "ti-arrows-exchange"}`} />
-        </div>
+        {aiChoice !== undefined && (
+          <div className={`slot-status ${isAiSelected ? "done" : "alt"}`}>
+            <i className={`ti ${isAiSelected ? "ti-check" : "ti-arrows-exchange"}`} />
+          </div>
+        )}
       </div>
 
       <div className="swipe-hint">
@@ -192,7 +197,8 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason }: SlotProps) {
       <div className="card-window">
         <div
           ref={cardRef}
-          className={`swipe-card ${isRec ? "rec-style" : "alt-style"}`}
+          className={`swipe-card ${isAiSelected ? "rec-style" : isAiAlternative ? "alt-style" : ""}`}
+          style={aiChoice === undefined ? { background: '#fff', border: '1px solid var(--border)' } : {}}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
@@ -209,32 +215,14 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason }: SlotProps) {
                   marginBottom: 10,
                 }}
               >
-                <div className={`card-label ${aiReason ? "ai-lbl" : isRec ? "rec-lbl" : "alt-lbl"}`}>
-                  <i
-                    className={`ti ${aiReason ? "ti-brain" : isRec ? "ti-star" : "ti-arrows-exchange"}`}
-                  />
-                  <span>{aiReason ? "Wybór AI" : isRec ? "Rekomendowane" : "Alternatywa"}</span>
-                </div>
-                <div
-                  style={{
-                    display: "flex",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: 2,
-                    flexShrink: 0,
-                  }}
-                >
-                  <ScoreRing score={opt.score} />
-                  <span
-                    style={{
-                      fontSize: 9,
-                      color: "var(--text3)",
-                      fontWeight: 600,
-                    }}
-                  >
-                    Predykcja
-                  </span>
-                </div>
+                {aiChoice !== undefined ? (
+                  <div className={`card-label ${isAiSelected ? "ai-lbl" : "alt-lbl"}`}>
+                    <i
+                      className={`ti ${isAiSelected ? "ti-brain" : "ti-arrows-exchange"}`}
+                    />
+                    <span>{isAiSelected ? "Wybór AI" : "Alternatywa"}</span>
+                  </div>
+                ) : <div />}
               </div>
               <div className="card-name">{opt.name}</div>
               <div
@@ -268,13 +256,17 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason }: SlotProps) {
 
             {/* TYŁ */}
             <div className="card-face card-back">
-              <div className="card-back-hdr">
-                <i className="ti ti-brain" />
-                <span>Uzasadnienie</span>
-              </div>
-              <div className={`card-why ${isRec ? "green" : "orange"}`}>
-                {aiReason || opt.why}
-              </div>
+              {aiChoice !== undefined && (
+                <>
+                  <div className="card-back-hdr">
+                    <i className="ti ti-brain" />
+                    <span>Uzasadnienie AI</span>
+                  </div>
+                  <div className={`card-why ${isAiSelected ? "green" : "orange"}`}>
+                    {isAiSelected ? aiReason : "AI rekomendowało inną opcję dla Twoich objawów. To jest opcja alternatywna."}
+                  </div>
+                </>
+              )}
               <div className="card-tags">
                 {opt.tags.map((tag) => (
                   <span key={tag.t} className={`tag ${tag.c}`}>
@@ -292,8 +284,8 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason }: SlotProps) {
       </div>
 
       <div className="swipe-dots">
-        <div className={`sdot ${isRec ? "rec-active" : ""}`} />
-        <div className={`sdot ${!isRec ? "alt-active" : ""}`} />
+        <div className={`sdot ${optionIdx === 0 ? (aiChoice !== undefined ? (aiChoice === 0 ? "ai-active" : "alt-active") : "active") : ""}`} style={optionIdx === 0 && aiChoice !== undefined && aiChoice === 0 ? {background: 'var(--orange)', transform: 'scale(1.2)'} : {}} />
+        <div className={`sdot ${optionIdx === 1 ? (aiChoice !== undefined ? (aiChoice === 1 ? "ai-active" : "alt-active") : "active") : ""}`} style={optionIdx === 1 && aiChoice !== undefined && aiChoice === 1 ? {background: 'var(--orange)', transform: 'scale(1.2)'} : {}} />
       </div>
     </div>
   );
@@ -314,6 +306,7 @@ export default function OrderScreen({
   const [aiApplied, setAiApplied] = useState(false);
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiReasons, setAiReasons] = useState<Record<string, string>>({});
+  const [aiChoices, setAiChoices] = useState<Record<string, number>>({});
   const [globalAiReason, setGlobalAiReason] = useState<string | null>(null);
 
   const orderDate = useMemo(() => getOrderableDate(), []);
@@ -336,22 +329,22 @@ export default function OrderScreen({
 
   const flip = (mealId: string, dir: 1 | -1) => {
     setChoices({ ...choices, [mealId]: (choices[mealId] ?? 0) + dir });
-    setAiApplied(false);
-    if (aiReasons[mealId]) {
-      const newAiReasons = { ...aiReasons };
-      delete newAiReasons[mealId];
-      setAiReasons(newAiReasons);
-    }
   };
 
   const applyAiRecommendation = async () => {
     setIsAiLoading(true);
+    // Strip biasing fields so the AI makes an independent clinical decision
+    const cleanedMeals = activeMeals.map(meal => ({
+      ...meal,
+      options: meal.options.map(({ isRec, score, scoreReason, why, ...rest }) => rest),
+    }));
+
     const payload = {
       patient,
       symptoms,
       symptomHistory,
       eatenMap,
-      activeMeals,
+      activeMeals: cleanedMeals,
     };
     
     const result = await fetchAiRecommendation(payload);
@@ -361,12 +354,13 @@ export default function OrderScreen({
       const newChoices: Record<string, number> = {};
       const newReasons: Record<string, string> = {};
       
-      for (const [mealId, data] of Object.entries(result.choices)) {
+      for (const [mealId, data] of Object.entries(result.choices || {})) {
         newChoices[mealId] = data.choice;
         newReasons[mealId] = data.reason;
       }
       
       setChoices({ ...choices, ...newChoices });
+      setAiChoices(newChoices);
       setAiReasons(newReasons);
       setGlobalAiReason(result.globalReason);
       setAiApplied(true);
@@ -383,15 +377,6 @@ export default function OrderScreen({
     (sum, m) => sum + getOption(m, choices[m.id] ?? 0).kcal,
     0,
   );
-  const avgScore =
-    Math.round(
-      (activeMeals.reduce(
-        (sum, m) => sum + getOption(m, choices[m.id] ?? 0).score,
-        0,
-      ) /
-        activeMeals.length) *
-        10,
-    ) / 10;
 
   return (
     <div className="screen active">
@@ -402,34 +387,19 @@ export default function OrderScreen({
         </div>
       </div>
 
-      <div className="pred-banner">
-        <div className="pb-top">
-          <i className="ti ti-brain" />
-          <span style={{ textTransform: "capitalize" }}>
-            Predykcja AI · {orderDateDisplay} (za 2 dni)
-          </span>
-        </div>
-        <p>
-          {globalAiReason || "Nudności słabną, wrażliwość żołądka utrzymuje się. Model zaleca dania chłodne, lekkostrawne, wysokobiałkowe."}
-        </p>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div className="diet-pill">
-            <span>Lekkostrawna wysokobiałkowa</span>
+      {globalAiReason && (
+        <div className="pred-banner">
+          <div className="pb-top">
+            <i className="ti ti-brain" />
+            <span style={{ textTransform: "capitalize" }}>
+              Podsumowanie AI · {orderDateDisplay}
+            </span>
           </div>
-          {!loading && (
-            <div
-              style={{ fontSize: 11, color: "var(--orange)", fontWeight: 600 }}
-            >
-              Śr. dopasowanie: {avgScore}/10
-            </div>
-          )}
-          {loading && (
-            <div style={{ fontSize: 11, color: "var(--text3)" }}>
-              Ładowanie menu…
-            </div>
-          )}
+          <p style={{ marginBottom: 0 }}>
+            {globalAiReason}
+          </p>
         </div>
-      </div>
+      )}
 
       <div className="scroll">
         <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
@@ -513,6 +483,7 @@ export default function OrderScreen({
                 optionIdx={choices[meal.id] ?? 0}
                 onFlip={(dir) => flip(meal.id, dir)}
                 aiReason={aiReasons[meal.id]}
+                aiChoice={aiChoices[meal.id]}
               />
             ))}
 
@@ -536,19 +507,9 @@ export default function OrderScreen({
                       style={{ display: "flex", alignItems: "center", gap: 6 }}
                     >
                       <span
-                        className={`sum-val ${opt.isRec ? "green" : "orange"}`}
+                        className={`sum-val ${aiChoices[meal.id] !== undefined ? (aiChoices[meal.id] === choices[meal.id] ? "green" : "orange") : ""}`}
                       >
                         {opt.name}
-                      </span>
-                      <span
-                        style={{
-                          fontSize: 10,
-                          color:
-                            opt.score >= 8 ? "var(--green)" : "var(--amber)",
-                          fontWeight: 700,
-                        }}
-                      >
-                        {opt.score}/10
                       </span>
                     </div>
                   </div>

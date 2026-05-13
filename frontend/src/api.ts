@@ -56,9 +56,9 @@ function mapDish(dish: any, isRec: boolean, slotIcon: string) {
 export async function fetchMenuForDate(dateStr: string): Promise<Meal[] | null> {
   const url = new URL(API_BASE);
   url.searchParams.set('dietId',                '2388');
-  url.searchParams.set('dietVariantId',         '4196');
-  url.searchParams.set('dietVariantCaloriesId', '15759');
-  url.searchParams.set('menuScheduleId',        '7274');
+  url.searchParams.set('dietVariantId',         '4881');
+  url.searchParams.set('dietVariantCaloriesId', '18414');
+  url.searchParams.set('menuScheduleId',        '7354');
   url.searchParams.set('menuDateAsString',      dateStr);
 
   try {

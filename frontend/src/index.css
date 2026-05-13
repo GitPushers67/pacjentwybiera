@@ -660,6 +660,10 @@ ion-app {
   background: var(--orange);
   transform: scale(1.2);
 }
+.sdot.active {
+  background: var(--text2);
+  transform: scale(1.2);
+}
 
 .summary-card {
   background: var(--card);

@@ -94,11 +94,18 @@ Spożycie posiłków dzisiaj (full = zjedzone, none = niezjedzone):
 Dostępne posiłki do wyboru na pojutrze:
 {json.dumps(req.activeMeals, ensure_ascii=False, indent=2)}
 
-Zasady:
-1. Dla każdego posiłku (id w tablicy activeMeals) wybierz indeks opcji (0 lub 1), która będzie lepsza.
-2. Napisz krótkie (1-2 zdania) uzasadnienie dlaczego ta opcja została wybrana pod względem klinicznym.
-3. Napisz jedno ogólne uzasadnienie wyboru na cały dzień (globalReason).
-4. Zwróć DOKŁADNIE w formacie JSON (nic więcej):
+Zasady i wytyczne:
+1. NIEZALEŻNOŚĆ OCENY: Zignoruj całkowicie pola `isRec`, `score` oraz `scoreReason` w opcjach - to są sztywne wartości systemowe, które masz zignorować. Zrób w 100% samodzielną, obiektywną ocenę na podstawie prawdziwych składników (ingredientsName), makroskładników (szczególnie białka) oraz aktualnych objawów pacjenta! 
+2. DOPASOWANIE DO OBJAWÓW (KLINICZNE):
+   - Nudności/wymioty: preferuj dania na zimno, łagodne, bez intensywnych zapachów, unikaj bardzo tłustych.
+   - Biegunka: preferuj dania zapierające (np. ryż, marchew), unikaj nadmiaru błonnika.
+   - Zaparcia: preferuj opcje z większą ilością warzyw i owoców.
+   - Brak apetytu: preferuj posiłki gęste odżywczo, wysokobiałkowe.
+   - Zmiany w jamie ustnej: unikaj dań kwaśnych, gorących i suchych/twardych.
+3. PERSONALIZACJA: W uzasadnieniach (reason) zwracaj się empatycznie bezpośrednio do pacjenta na "Ty" (używając jego imienia z profilu). Wyjaśnij konkretnie, dlaczego dany składnik pomoże mu w jego aktualnym samopoczuciu lub leczeniu.
+4. ODWAŻNE DECYZJE: Bądź rzetelny i nie bój się wybierać alternatywy (opcja 1), jeśli lepiej pasuje do dzisiejszych objawów pacjenta niż domyślna rekomendacja (opcja 0).
+5. UZASADNIENIE OGÓLNE (globalReason): Podsumuj w 2-3 zdaniach całą strategię na dzień. Daj pacjentowi poczucie zaopiekowania i wyjaśnij główny cel dzisiejszej diety.
+6. Zwróć DOKŁADNIE w formacie JSON (nic więcej):
 {{
   "globalReason": "krótkie ogólne uzasadnienie decyzji na cały dzień",
   "choices": {{
