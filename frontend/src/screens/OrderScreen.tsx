@@ -4,12 +4,12 @@ import type { Screen, Meal, PatientProfile, SymptomHistoryEntry, EatenStatus } f
 import { meals as fallbackMeals } from "../data";
 import {
   getOption,
-  getToday,
   getOrderableDate,
   formatDateForAPI,
   formatDateLongPL,
 } from "../utils";
 import { fetchMenuForDate, fetchAiRecommendation } from "../api";
+import TopbarDate from "../components/TopbarDate";
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -333,7 +333,6 @@ export default function OrderScreen({
     () => formatDateLongPL(orderDate),
     [orderDate],
   );
-  const todayDisplay = useMemo(() => formatDateLongPL(getToday()), []);
 
   useEffect(() => {
     fetchMenuForDate(orderDateStr).then((result) => {
@@ -399,10 +398,8 @@ export default function OrderScreen({
   return (
     <div className="screen active">
       <div className="topbar">
-        <div>
-          <h1>Zamówienie</h1>
-          <p style={{ textTransform: "capitalize" }}>{todayDisplay}</p>
-        </div>
+        <div><h1>Zamówienie</h1></div>
+        <TopbarDate />
       </div>
 
       {globalAiReason && (

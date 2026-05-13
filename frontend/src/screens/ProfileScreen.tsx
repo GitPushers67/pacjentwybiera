@@ -2,6 +2,7 @@ import { useState } from 'react';
 import Navbar from '../components/Navbar';
 import type { Screen, PatientProfile } from '../types';
 import { allergensList, getDailyTargets } from '../data';
+import TopbarDate from '../components/TopbarDate';
 
 const TREATMENT_LABELS: Record<string, string> = {
   chemo: 'Chemioterapia',
@@ -25,7 +26,6 @@ const TREATMENT_SESSIONS = [
 ];
 
 export default function ProfileScreen({ navigate, patient }: Props) {
-  const [streak] = useState([true, true, true, true, true]);
   const [showTreatment, setShowTreatment] = useState(false);
 
   const targets = getDailyTargets(patient.weightKg);
@@ -39,45 +39,10 @@ export default function ProfileScreen({ navigate, patient }: Props) {
     <div className="screen active">
       <div className="topbar">
         <div><h1>Profil</h1></div>
+        <TopbarDate />
       </div>
 
       <div className="scroll">
-        <div style={{
-          background: 'var(--card)', borderRadius: 15,
-          border: '1px solid var(--border)', padding: 13, marginBottom: 10,
-        }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 5 }}>
-            <span style={{ fontSize: 14, fontWeight: 600, color: 'var(--text)' }}>Seria raportowania</span>
-            <span style={{ fontSize: 22, fontWeight: 700, color: 'var(--orange)' }}>5</span>
-          </div>
-          <p style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 8 }}>
-            Im dłuższa seria → tym dokładniejsza predykcja AI
-          </p>
-          <div style={{ display: 'flex', gap: 5 }}>
-            {streak.map((_, i) => (
-              <div key={i} style={{
-                width: 32, height: 32, borderRadius: '50%',
-                background: 'var(--orange)',
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-              }}>
-                <i className="ti ti-check" style={{ fontSize: 12, color: '#fff' }} />
-              </div>
-            ))}
-            <div style={{
-              width: 32, height: 32, borderRadius: '50%',
-              background: 'var(--bg)', border: '2px solid var(--orange)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11, color: 'var(--orange)', fontWeight: 600,
-            }}>6</div>
-            <div style={{
-              width: 32, height: 32, borderRadius: '50%',
-              background: 'var(--bg)', border: '1px solid var(--border)',
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontSize: 11, color: 'var(--text2)',
-            }}>7</div>
-          </div>
-        </div>
-
         <div style={{
           background: 'var(--card)', borderRadius: 15,
           border: '1px solid var(--border)', padding: 13, marginBottom: 10,

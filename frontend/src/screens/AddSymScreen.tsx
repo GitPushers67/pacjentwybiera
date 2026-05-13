@@ -2,6 +2,7 @@ import { useState, type Dispatch, type SetStateAction } from "react";
 import SymptomModal from "../components/SymptomModal";
 import Navbar from "../components/Navbar";
 import type { Screen, SymptomHistoryEntry } from "../types";
+import TopbarDate from "../components/TopbarDate";
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -107,15 +108,15 @@ export default function AddSymScreen({
           <h1>Dodaj objaw</h1>
           <p>Kliknij objaw, aby zapisać do historii</p>
         </div>
-        <button
-          style={{ background: "none", border: "none", cursor: "pointer" }}
-          onClick={() => navigate("home")}
-        >
-          <i
-            className="ti ti-x"
-            style={{ fontSize: 20, color: "var(--text2)" }}
-          />
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+          <TopbarDate />
+          <button
+            style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
+            onClick={() => navigate("home")}
+          >
+            <i className="ti ti-x" style={{ fontSize: 20, color: "var(--text2)" }} />
+          </button>
+        </div>
       </div>
 
       <div className="scroll" style={{ paddingBottom: 92 }}>

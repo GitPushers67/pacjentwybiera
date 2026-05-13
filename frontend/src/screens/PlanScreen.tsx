@@ -7,6 +7,7 @@ import {
   getOption,
 } from '../utils';
 import { fetchMenuForDate } from '../api';
+import TopbarDate from '../components/TopbarDate';
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -236,6 +237,7 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
     <div className="screen active">
       <div className="topbar">
         <div><h1>Plan posiłków</h1></div>
+        <TopbarDate />
       </div>
 
       {/* ── 7-day bar ─────────────────────────────────────── */}

@@ -1,6 +1,7 @@
 import Navbar from '../components/Navbar';
 import type { Screen } from '../types';
 import { allergensList } from '../data';
+import TopbarDate from '../components/TopbarDate';
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -24,12 +25,15 @@ export default function AllergensScreen({ navigate, allergens, setAllergens }: P
           <h1>Alergeny i wykluczenia</h1>
           <p>Zaznacz produkty, których unikasz</p>
         </div>
-        <button
-          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}
-          onClick={() => navigate('profile')}
-        >
-          <i className="ti ti-x" style={{ fontSize: 20, color: 'var(--text2)' }} />
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
+          <TopbarDate />
+          <button
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+            onClick={() => navigate('profile')}
+          >
+            <i className="ti ti-x" style={{ fontSize: 20, color: 'var(--text2)' }} />
+          </button>
+        </div>
       </div>
 
       <div className="scroll">

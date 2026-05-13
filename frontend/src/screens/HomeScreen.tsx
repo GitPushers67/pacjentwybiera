@@ -12,6 +12,7 @@ import { meals as fallbackMeals } from "../data";
 import { getToday, formatDateForAPI } from "../utils";
 import { fetchMenuForDate } from "../api";
 import logo from "../assets/logo.png";
+import TopbarDate from "../components/TopbarDate";
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -124,11 +125,7 @@ export default function HomeScreen({
           alt="Pacjent Wybiera"
           style={{ height: 58, objectFit: "contain" }}
         />
-        <div className="streak-pill">
-          <i className="ti ti-flame" />
-          <span>5</span>
-          <small>dni</small>
-        </div>
+        <TopbarDate />
       </div>
 
       <div style={{ padding: "0 16px 12px" }}>
