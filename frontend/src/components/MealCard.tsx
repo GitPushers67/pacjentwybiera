@@ -48,7 +48,7 @@ export function MealCard({
   const handleConfirmPartial = (pct: number) => {
     triggerAnim();
     onUpdatePartialPct(pct);
-    onSetStatus('partial');
+    onSetStatus(pct >= 100 ? 'eaten' : 'partial');
     onShowPlate(false);
   };
 
