@@ -66,6 +66,14 @@ export interface PatientProfile {
 
 export type EatenStatus = 'none' | 'full';
 
+export type MealStatus = 'pending' | 'eaten' | 'partial' | 'not_eaten';
+
+export interface MealCardState {
+  status: MealStatus;
+  partialPct?: number;
+  showPlate?: boolean;
+}
+
 export type Screen =
   | 'onboarding' | 'home' | 'plan' | 'order' | 'add-sym' | 'profile'
   | 'confirm' | 'welcome' | 'allergens' | 'nutrition';

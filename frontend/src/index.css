@@ -21,6 +21,52 @@
   --alight: #fef5e4;
   --brand-orange: #f5a320;
   --brand-orange-light: #fef3e0;
+
+  /* Meal Tracker Design Tokens */
+  --meal-green: #3CAB8F;
+  --meal-green-dark: #2d9a7e;
+  --meal-green-light-bg: #F0FBF7;
+  --meal-green-border: #3CAB8F;
+
+  --meal-red: #E05252;
+  --meal-red-light-bg: #FFF5F5;
+  --meal-red-border: #FDCECE;
+
+  --meal-orange: #F5A623;
+  --meal-orange-dark: #D4880A;
+  --meal-orange-light-bg: #FFFBF2;
+  --meal-orange-border: #F5C870;
+
+  --meal-bg-app: #F0EDE6;
+  --meal-bg-card: #FFFFFF;
+  --meal-bg-plate-inner: #FAF7F2;
+  --meal-plate-rim: #EDE8DF;
+  --meal-border-default: #E8E2D8;
+  --meal-border-light: #EDE8DF;
+
+  --meal-text-primary: #2C2C2C;
+  --meal-text-secondary: #888888;
+  --meal-text-muted: #AAAAAA;
+  --meal-text-hint: #B0A898;
+
+  /* Meal Tracker Spacing */
+  --meal-radius-sm: 10px;
+  --meal-radius-md: 12px;
+  --meal-radius-lg: 14px;
+  --meal-radius-xl: 18px;
+  --meal-radius-2xl: 20px;
+
+  --meal-gap-xs: 6px;
+  --meal-gap-sm: 8px;
+  --meal-gap-md: 10px;
+  --meal-gap-lg: 14px;
+  --meal-gap-xl: 20px;
+
+  /* Meal Tracker Shadows */
+  --meal-shadow-card: 0 2px 8px rgba(0,0,0,0.05);
+  --meal-shadow-card-current: 0 4px 20px rgba(60,171,143,0.18);
+  --meal-shadow-plate: 0 4px 24px rgba(0,0,0,0.10);
+  --meal-shadow-confirm: 0 4px 12px rgba(60,171,143,0.35);
 }
 
 * {
@@ -1700,4 +1746,391 @@ ion-app {
 }
 .dp.on .treat-dot {
   box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.5);
+}
+
+/* ── Meal Tracker States ────────────────────────────── */
+.meal-card {
+  background: var(--meal-bg-card);
+  border: 1.5px solid var(--meal-border-light);
+  border-radius: var(--meal-radius-xl);
+  padding: 14px;
+  margin-bottom: var(--meal-gap-md);
+  box-shadow: var(--meal-shadow-card);
+  transition: all 0.25s ease;
+}
+
+.meal-card--animating {
+  transform: scale(0.985);
+}
+
+.meal-card.meal-card--eaten {
+  background: var(--meal-green-light-bg);
+  border-color: var(--meal-green-border);
+}
+
+.meal-card.meal-card--not-eaten {
+  background: var(--meal-red-light-bg);
+  border-color: var(--meal-red-border);
+}
+
+.meal-card.meal-card--partial {
+  background: var(--meal-orange-light-bg);
+  border-color: var(--meal-orange-border);
+}
+
+.meal-card.meal-card--current {
+  border-color: var(--meal-green);
+  box-shadow: var(--meal-shadow-card-current);
+  position: relative;
+}
+
+.meal-card.meal-card--current::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--meal-green) 0%, var(--meal-green-dark) 100%);
+  border-radius: var(--meal-radius-xl) var(--meal-radius-xl) 0 0;
+}
+
+.meal-card-header {
+  display: flex;
+  align-items: center;
+  gap: var(--meal-gap-sm);
+  margin-bottom: var(--meal-gap-md);
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.meal-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: var(--meal-green);
+  color: white;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.meal-card-title {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--meal-text-primary);
+  line-height: 1.4;
+  margin-bottom: var(--meal-gap-md);
+}
+
+.meal-card-status {
+  display: flex;
+  align-items: center;
+  gap: var(--meal-gap-xs);
+  font-size: 11px;
+  font-weight: 700;
+  margin-bottom: var(--meal-gap-md);
+}
+
+.meal-card-status.status-eaten {
+  color: var(--meal-green);
+}
+
+.meal-card-status.status-not-eaten {
+  color: var(--meal-red);
+}
+
+.meal-card-status.status-partial {
+  color: var(--meal-orange-dark);
+}
+
+.meal-action-buttons {
+  display: flex;
+  gap: var(--meal-gap-xs);
+  width: 100%;
+}
+
+.meal-btn {
+  flex: 1;
+  height: 42px;
+  border-radius: var(--meal-radius-md);
+  border: 1.5px solid;
+  font-size: 12px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.15s ease;
+}
+
+.meal-btn:active {
+  transform: scale(0.95);
+}
+
+.meal-btn--not-ate {
+  background: var(--meal-red-light-bg);
+  border-color: var(--meal-red-border);
+  color: var(--meal-red);
+}
+
+.meal-btn--partial {
+  background: #FAF7F2;
+  border-color: var(--meal-border-default);
+  color: var(--meal-text-secondary);
+}
+
+.meal-btn--ate {
+  background: linear-gradient(135deg, var(--meal-green) 0%, var(--meal-green-dark) 100%);
+  border: none;
+  color: white;
+  font-weight: 800;
+}
+
+.meal-change-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 10px;
+  color: var(--meal-text-muted);
+  cursor: pointer;
+  text-decoration: none;
+  font-family: inherit;
+  line-height: 1.1;
+  transition: color 0.15s;
+}
+
+.meal-change-link:hover {
+  color: var(--meal-text-secondary);
+}
+
+/* ── Partial Meal Badge ────────────────────────────── */
+.partial-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--meal-gap-sm);
+  margin-bottom: var(--meal-gap-md);
+}
+
+.partial-plate-mini {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: var(--meal-bg-plate-inner);
+  border: 1.5px solid var(--meal-plate-rim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  position: relative;
+  overflow: hidden;
+}
+
+.partial-plate-fill {
+  position: absolute;
+  inset: 0;
+  background: var(--meal-green);
+  border-radius: 50%;
+  clip-path: polygon(50% 0%, 100% 0%, 100% 100%, 50% 100%);
+  opacity: 0.88;
+}
+
+.partial-plate-text {
+  position: relative;
+  z-index: 2;
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--meal-text-primary);
+}
+
+.partial-info {
+  flex: 1;
+}
+
+.partial-pct {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--meal-orange-dark);
+}
+
+.partial-label {
+  font-size: 11px;
+  color: var(--meal-text-secondary);
+}
+
+.partial-edit-btn {
+  background: #FFF8EC;
+  border: 1.5px solid var(--meal-orange-border);
+  color: var(--meal-orange-dark);
+  padding: 6px 12px;
+  border-radius: var(--meal-radius-sm);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.15s ease;
+}
+
+.partial-edit-btn:active {
+  transform: scale(0.95);
+}
+
+/* ── Plate Selector ────────────────────────────────– */
+.plate-selector {
+  background: white;
+  border-radius: var(--meal-radius-2xl);
+  padding: 20px 16px 16px;
+  box-shadow: var(--meal-shadow-plate);
+  margin-top: var(--meal-gap-md);
+}
+
+.plate-selector-title {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--meal-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 16px;
+  text-align: center;
+}
+
+.plate-svg-container {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 12px;
+}
+
+.plate-svg {
+  width: 180px;
+  height: 180px;
+  touch-action: none;
+  cursor: grab;
+}
+
+.plate-svg:active {
+  cursor: grabbing;
+}
+
+.plate-hint {
+  font-size: 11px;
+  color: var(--meal-text-hint);
+  text-align: center;
+  margin-bottom: 16px;
+}
+
+.plate-presets {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--meal-gap-xs);
+  margin-bottom: 16px;
+}
+
+.plate-preset-btn {
+  height: 52px;
+  border-radius: var(--meal-radius-lg);
+  border: 2px solid var(--meal-border-light);
+  background: var(--meal-bg-plate-inner);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.15s ease;
+  font-weight: 600;
+  color: var(--meal-text-secondary);
+}
+
+.plate-preset-btn.active {
+  background: var(--meal-green);
+  border-color: var(--meal-green);
+  color: white;
+}
+
+.plate-preset-emoji {
+  font-size: 18px;
+}
+
+.plate-preset-label {
+  font-size: 9px;
+  font-weight: 700;
+}
+
+.plate-slider {
+  width: 100%;
+  height: 4px;
+  border-radius: 2px;
+  outline: none;
+  margin-bottom: 16px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: var(--meal-border-light);
+  cursor: pointer;
+}
+
+.plate-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--meal-green);
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(60, 171, 143, 0.4);
+  cursor: pointer;
+}
+
+.plate-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--meal-green);
+  border: 3px solid white;
+  box-shadow: 0 2px 8px rgba(60, 171, 143, 0.4);
+  cursor: pointer;
+}
+
+.plate-actions {
+  display: flex;
+  gap: var(--meal-gap-xs);
+}
+
+.plate-btn-cancel {
+  flex: 1;
+  height: 44px;
+  border-radius: var(--meal-radius-lg);
+  border: 2px solid var(--meal-border-light);
+  background: white;
+  color: var(--meal-text-secondary);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.15s ease;
+}
+
+.plate-btn-confirm {
+  flex: 2;
+  height: 44px;
+  border-radius: var(--meal-radius-lg);
+  border: none;
+  background: linear-gradient(135deg, var(--meal-green) 0%, var(--meal-green-dark) 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: all 0.15s ease;
+  box-shadow: var(--meal-shadow-confirm);
+}
+
+.plate-btn-confirm:active {
+  transform: scale(0.98);
 }

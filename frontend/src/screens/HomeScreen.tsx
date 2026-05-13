@@ -1,19 +1,17 @@
 import {
   useEffect,
-  useRef,
   useState,
   useMemo,
   type Dispatch,
   type SetStateAction,
 } from "react";
 import Navbar from "../components/Navbar";
-import type { EatenStatus, Meal, PatientProfile, Screen } from "../types";
+import { MealCard } from "../components/MealCard";
+import type { EatenStatus, Meal, PatientProfile, Screen, MealCardState } from "../types";
 import { meals as fallbackMeals } from "../data";
-import { getOption, getToday, formatDateForAPI } from "../utils";
+import { getToday, formatDateForAPI } from "../utils";
 import { fetchMenuForDate } from "../api";
 import logo from "../assets/logo.png";
-
-type CamState = "idle" | "scanning" | "done";
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -24,113 +22,6 @@ interface Props {
   eatenMap: Record<string, EatenStatus>;
   setEatenMap: Dispatch<SetStateAction<Record<string, EatenStatus>>>;
   patient: PatientProfile;
-}
-
-const CAM_LABEL: Record<CamState, string> = {
-  idle: "Zrób zdjęcie — AI wykryje co zjedzone",
-  scanning: "Analizuję zdjęcie...",
-  done: "AI: posiłek rozpoznany ✓",
-};
-
-function CameraButton({
-  camState,
-  onPress,
-}: {
-  camState: CamState;
-  onPress: () => void;
-}) {
-  const icon =
-    camState === "scanning"
-      ? "ti-loader-2 cam-spin"
-      : camState === "done"
-        ? "ti-check"
-        : "ti-camera";
-  return (
-    <button className={`camera-scan-btn ${camState}`} onClick={onPress}>
-      <i className={`ti ${icon}`} style={{ fontSize: 13 }} />
-      <span>{CAM_LABEL[camState]}</span>
-    </button>
-  );
-}
-
-function EatenToggle({
-  value,
-  onChange,
-}: {
-  value: EatenStatus;
-  onChange: (v: EatenStatus) => void;
-}) {
-  const eaten = value === "full";
-  return (
-    <button
-      onClick={() => onChange(eaten ? "none" : "full")}
-      style={{
-        background: eaten ? "var(--green)" : "var(--red)",
-        border: "none",
-        borderRadius: 22,
-        padding: "7px 13px",
-        cursor: "pointer",
-        display: "flex",
-        alignItems: "center",
-        gap: 5,
-        flexShrink: 0,
-        boxShadow: eaten
-          ? "0 2px 8px rgba(45,125,90,0.35)"
-          : "0 2px 8px rgba(192,57,43,0.35)",
-      }}
-    >
-      <i
-        className={`ti ${eaten ? "ti-check" : "ti-x"}`}
-        style={{ fontSize: 12, color: "#fff" }}
-      />
-      <span
-        style={{
-          fontSize: 11,
-          fontWeight: 700,
-          color: "#fff",
-          whiteSpace: "nowrap",
-        }}
-      >
-        {eaten ? "Zjedzone" : "Nie zjedzone"}
-      </span>
-    </button>
-  );
-}
-
-function MealCard({
-  meal,
-  isCurrent,
-  choices,
-  status,
-  camState,
-  onEaten,
-  onCamera,
-}: {
-  meal: Meal;
-  isCurrent?: boolean;
-  choices: Record<string, number>;
-  status: EatenStatus;
-  camState: CamState;
-  onEaten: (v: EatenStatus) => void;
-  onCamera: () => void;
-}) {
-  const opt = getOption(meal, choices[meal.id] ?? 0);
-  return (
-    <div
-      className={`hmc ${isCurrent ? "hmc-current " : ""}${status === "full" ? "hmc-eaten" : "hmc-not-eaten"}`}
-    >
-      <div className="hmc-top">
-        <div className="hmc-info">
-          <div className="hmc-type">
-            {meal.title} · {meal.time}
-          </div>
-          <div className="hmc-name">{opt.name}</div>
-        </div>
-        <EatenToggle value={status} onChange={onEaten} />
-      </div>
-      <CameraButton camState={camState} onPress={onCamera} />
-    </div>
-  );
 }
 
 function getCurrentMealId(): string {
@@ -144,22 +35,13 @@ function getCurrentMealId(): string {
 
 export default function HomeScreen({
   navigate,
-  choices,
   eatenMap,
   setEatenMap,
 }: Props) {
-  const [cameraMap, setCameraMap] = useState<Record<string, CamState>>({});
   const [apiMeals, setApiMeals] = useState<Meal[] | null>(null);
-  const timerRefs = useRef<ReturnType<typeof setTimeout>[]>([]);
+  const [mealStates, setMealStates] = useState<Record<string, MealCardState>>({});
 
   const today = useMemo(() => getToday(), []);
-
-  useEffect(
-    () => () => {
-      timerRefs.current.forEach(clearTimeout);
-    },
-    [],
-  );
 
   useEffect(() => {
     fetchMenuForDate(formatDateForAPI(today)).then(setApiMeals);
@@ -167,22 +49,72 @@ export default function HomeScreen({
 
   const meals = apiMeals ?? fallbackMeals;
 
-  const triggerCamera = (mealId: string) => {
-    if (cameraMap[mealId] === "scanning") return;
-    setCameraMap((prev) => ({ ...prev, [mealId]: "scanning" }));
-    const t1 = setTimeout(() => {
-      setCameraMap((prev) => ({ ...prev, [mealId]: "done" }));
-      setEatenMap((prev) => ({ ...prev, [mealId]: "full" }));
-      const t2 = setTimeout(
-        () => setCameraMap((prev) => ({ ...prev, [mealId]: "idle" })),
-        2800,
-      );
-      timerRefs.current.push(t2);
-    }, 2200);
-    timerRefs.current.push(t1);
+  const currentMealId = getCurrentMealId();
+
+  const getMealState = (
+    mealId: string,
+    stateMap: Record<string, MealCardState> = mealStates,
+  ): MealCardState => {
+    const localState = stateMap[mealId];
+    if (localState) return localState;
+
+    if (eatenMap[mealId] === "full") {
+      return { status: "eaten", partialPct: 100, showPlate: false };
+    }
+
+    return { status: "pending", partialPct: 50, showPlate: false };
   };
 
-  const currentMealId = getCurrentMealId();
+  const handleSetMealStatus = (mealId: string, status: MealCardState["status"]) => {
+    setMealStates((prev) => ({
+      ...prev,
+      [mealId]: {
+        ...getMealState(mealId, prev),
+        ...prev[mealId],
+        status,
+        showPlate: false,
+        partialPct:
+          status === "eaten"
+            ? 100
+            : (prev[mealId]?.partialPct ?? getMealState(mealId, prev).partialPct ?? 50),
+      },
+    }));
+    setEatenMap((prev) => ({ ...prev, [mealId]: status === "eaten" ? "full" : "none" }));
+  };
+
+  const handleUpdatePartialPct = (mealId: string, pct: number) => {
+    setMealStates((prev) => ({
+      ...prev,
+      [mealId]: {
+        ...getMealState(mealId, prev),
+        ...prev[mealId],
+        partialPct: pct,
+      },
+    }));
+  };
+
+  const handleShowPlate = (mealId: string, show: boolean) => {
+    setMealStates((prev) => ({
+      ...prev,
+      [mealId]: {
+        ...getMealState(mealId, prev),
+        ...prev[mealId],
+        showPlate: show,
+      },
+    }));
+  };
+
+  const handleResetStatus = (mealId: string) => {
+    setMealStates((prev) => ({
+      ...prev,
+      [mealId]: {
+        status: 'pending',
+        partialPct: 50,
+        showPlate: false,
+      },
+    }));
+    setEatenMap((prev) => ({ ...prev, [mealId]: "none" }));
+  };
 
   return (
     <div className="screen active">
@@ -267,13 +199,11 @@ export default function HomeScreen({
               key={meal.id}
               meal={meal}
               isCurrent
-              choices={choices}
-              status={eatenMap[meal.id] ?? "none"}
-              camState={cameraMap[meal.id] ?? "idle"}
-              onEaten={(v) =>
-                setEatenMap((prev) => ({ ...prev, [meal.id]: v }))
-              }
-              onCamera={() => triggerCamera(meal.id)}
+              state={getMealState(meal.id)}
+              onSetStatus={(status) => handleSetMealStatus(meal.id, status)}
+              onUpdatePartialPct={(pct) => handleUpdatePartialPct(meal.id, pct)}
+              onShowPlate={(show) => handleShowPlate(meal.id, show)}
+              onReset={() => handleResetStatus(meal.id)}
             />
           ))}
 
@@ -299,13 +229,12 @@ export default function HomeScreen({
             <MealCard
               key={meal.id}
               meal={meal}
-              choices={choices}
-              status={eatenMap[meal.id] ?? "none"}
-              camState={cameraMap[meal.id] ?? "idle"}
-              onEaten={(v) =>
-                setEatenMap((prev) => ({ ...prev, [meal.id]: v }))
-              }
-              onCamera={() => triggerCamera(meal.id)}
+              isCurrent={false}
+              state={getMealState(meal.id)}
+              onSetStatus={(status) => handleSetMealStatus(meal.id, status)}
+              onUpdatePartialPct={(pct) => handleUpdatePartialPct(meal.id, pct)}
+              onShowPlate={(show) => handleShowPlate(meal.id, show)}
+              onReset={() => handleResetStatus(meal.id)}
             />
           ))}
 

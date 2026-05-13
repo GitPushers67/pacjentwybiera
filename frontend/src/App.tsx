@@ -47,9 +47,7 @@ export default function App() {
   const [symptomHistory, setSymptomHistory] = useState<SymptomHistoryEntry[]>(
     [],
   );
-  const [eatenMap, setEatenMap] = useState<Record<string, EatenStatus>>({
-    breakfast: "full",
-  });
+  const [eatenMap, setEatenMap] = useState<Record<string, EatenStatus>>({});
 
   const navigate = (s: Screen) => setScreen(s);
 
