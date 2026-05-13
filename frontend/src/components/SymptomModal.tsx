@@ -23,6 +23,12 @@ function getIntensityColor(value: number): string {
   return "var(--red)";
 }
 
+function scaleLbl(v: number) {
+  if (v >= 67) return 'Bardzo silny';
+  if (v >= 34) return 'Silny';
+  return 'Słaby';
+}
+
 export default function SymptomModal({
   symptom,
   intensity,
@@ -92,7 +98,7 @@ export default function SymptomModal({
                 color: getIntensityColor(intensity),
               }}
             >
-              {intensity}%
+              {scaleLbl(intensity)}
             </span>
           </div>
           <input
