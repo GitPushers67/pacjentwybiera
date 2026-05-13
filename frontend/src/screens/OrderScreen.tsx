@@ -122,9 +122,10 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
       if (!card || animDir !== 0) return;
       setAnimDir(dir);
       setFlipped(false);
-      card.style.transition = "transform .22s ease, opacity .22s ease";
+      card.style.transition = "transform .22s ease, opacity .22s ease, box-shadow .22s ease";
       card.style.transform = dir > 0 ? "translateX(-110%)" : "translateX(110%)";
       card.style.opacity = "0";
+      card.style.boxShadow = "";
       if (nextCard) {
         nextCard.style.transition = "transform .22s ease, opacity .22s ease";
         nextCard.style.transform = "scale(1)";
@@ -138,6 +139,7 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
             card.style.transition = "none";
             card.style.transform = "translateX(0)";
             card.style.opacity = "1";
+            card.style.boxShadow = "";
           }
           if (nextCard) {
             nextCard.style.transition = "none";
@@ -184,6 +186,8 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
     dx.current = deltaX;
     if (cardRef.current) {
       cardRef.current.style.transform = `translateX(${dx.current}px) rotate(${dx.current * 0.025}deg)`;
+      const shadowProgress = Math.min(Math.abs(dx.current) / 100, 1);
+      cardRef.current.style.boxShadow = `0px ${8 + 12 * shadowProgress}px ${16 + 24 * shadowProgress}px rgba(0,0,0,${0.05 + 0.1 * shadowProgress})`;
     }
     if (nextCardRef.current) {
       const isValidSwipe = (optionIdx === 0 && dx.current < 0) || (optionIdx === 1 && dx.current > 0);
@@ -203,8 +207,9 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
       triggerFlip(-1);
     } else {
       if (cardRef.current) {
-        cardRef.current.style.transition = "transform .18s ease";
+        cardRef.current.style.transition = "transform .18s ease, box-shadow .18s ease";
         cardRef.current.style.transform = "translateX(0) rotate(0deg)";
+        cardRef.current.style.boxShadow = "";
       }
       if (nextCardRef.current) {
         nextCardRef.current.style.transition = "transform .18s ease, opacity .18s ease";
