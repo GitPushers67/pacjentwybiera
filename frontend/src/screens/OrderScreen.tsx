@@ -31,12 +31,81 @@ interface SlotProps {
 }
 
 
+function CardContent({ opt, flipped, aiChoice, isAiSelected, aiReason }: any) {
+  return (
+    <div className={`card-inner${flipped ? " flipped" : ""}`}>
+      {/* PRZÓD */}
+      <div className="card-face card-front">
+        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
+          {aiChoice !== undefined ? (
+            <div className={`card-label ${isAiSelected ? "ai-lbl" : "alt-lbl"}`}>
+              <i className={`ti ${isAiSelected ? "ti-brain" : "ti-arrows-exchange"}`} />
+              <span>{isAiSelected ? "Wybór AI" : "Alternatywa"}</span>
+            </div>
+          ) : <div />}
+          <div style={{ display: "flex", gap: 3, opacity: 0.3, marginTop: 2 }}>
+            <i className="ti ti-chevron-left" style={{ fontSize: 13 }} />
+            <i className="ti ti-hand-two-fingers" style={{ fontSize: 15 }} />
+            <i className="ti ti-chevron-right" style={{ fontSize: 13 }} />
+          </div>
+        </div>
+        <div className="card-name">{opt.name}</div>
+        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}>
+          <span className="tag b">{opt.protein}g białka</span>
+          {opt.allergensText && (
+            <span className="tag a" style={{ display: "flex", alignItems: "center", gap: 3 }}>
+              <i className="ti ti-alert-triangle" style={{ fontSize: 9 }} />
+              {opt.allergensText}
+            </span>
+          )}
+        </div>
+        <div className="card-flip-hint">
+          <i className="ti ti-rotate-clockwise" />
+          <span>dotknij po szczegóły</span>
+        </div>
+      </div>
+
+      {/* TYŁ */}
+      <div className="card-face card-back">
+        {aiChoice !== undefined && (
+          <>
+            <div className="card-back-hdr">
+              <i className="ti ti-brain" />
+              <span>Uzasadnienie AI</span>
+            </div>
+            <div className={`card-why ${isAiSelected ? "green" : "orange"}`}>
+              {isAiSelected ? aiReason : "AI rekomendowało inną opcję dla Twoich objawów. To jest opcja alternatywna."}
+            </div>
+          </>
+        )}
+        <div className="card-tags">
+          {opt.tags.map((tag: any) => (
+            <span key={tag.t} className={`tag ${tag.c}`}>
+              {tag.t}
+            </span>
+          ))}
+        </div>
+        <span className="card-kcal">
+          {opt.kcal} kcal · {opt.protein}g B · {opt.carbs}g W · {opt.fat}g T
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
   const opt = getOption(meal, optionIdx);
+  const nextIdx = optionIdx === 0 ? 1 : 0;
+  const nextOpt = getOption(meal, nextIdx);
+
   const isAiSelected = aiChoice !== undefined && optionIdx === aiChoice;
   const isAiAlternative = aiChoice !== undefined && optionIdx !== aiChoice;
+
+  const isNextAiSelected = aiChoice !== undefined && nextIdx === aiChoice;
+  const isNextAiAlternative = aiChoice !== undefined && nextIdx !== aiChoice;
   
   const cardRef = useRef<HTMLDivElement>(null);
+  const nextCardRef = useRef<HTMLDivElement>(null);
   const startX = useRef(0);
   const startY = useRef(0);
   const dx = useRef(0);
@@ -49,28 +118,33 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
   const triggerFlip = useCallback(
     (dir: 1 | -1) => {
       const card = cardRef.current;
+      const nextCard = nextCardRef.current;
       if (!card || animDir !== 0) return;
       setAnimDir(dir);
       setFlipped(false);
       card.style.transition = "transform .22s ease, opacity .22s ease";
       card.style.transform = dir > 0 ? "translateX(-110%)" : "translateX(110%)";
       card.style.opacity = "0";
+      if (nextCard) {
+        nextCard.style.transition = "transform .22s ease, opacity .22s ease";
+        nextCard.style.transform = "scale(1)";
+        nextCard.style.opacity = "1";
+      }
       setTimeout(() => {
         onFlip(dir);
         setAnimDir(0);
-        if (card) {
-          card.style.transition = "none";
-          card.style.transform =
-            dir > 0 ? "translateX(110%)" : "translateX(-110%)";
-          card.style.opacity = "0";
-          requestAnimationFrame(() => {
-            requestAnimationFrame(() => {
-              card.style.transition = "transform .22s ease, opacity .22s ease";
-              card.style.transform = "translateX(0)";
-              card.style.opacity = "1";
-            });
-          });
-        }
+        requestAnimationFrame(() => {
+          if (card) {
+            card.style.transition = "none";
+            card.style.transform = "translateX(0)";
+            card.style.opacity = "1";
+          }
+          if (nextCard) {
+            nextCard.style.transition = "none";
+            nextCard.style.transform = "scale(0.95)";
+            nextCard.style.opacity = "0.6";
+          }
+        });
       }, 220);
     },
     [animDir, onFlip],
@@ -83,13 +157,13 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
     dx.current = 0;
     dirLocked.current = null;
     wasVertical.current = false;
-    const card = cardRef.current;
-    if (card) card.style.transition = "none";
+    if (cardRef.current) cardRef.current.style.transition = "none";
+    if (nextCardRef.current) nextCardRef.current.style.transition = "none";
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (!dragging.current) return;
-    const deltaX = e.clientX - startX.current;
+    let deltaX = e.clientX - startX.current;
     const deltaY = e.clientY - startY.current;
     if (dirLocked.current === null) {
       if (Math.abs(deltaX) < 5 && Math.abs(deltaY) < 5) return;
@@ -100,10 +174,22 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
       return;
     }
     e.stopPropagation();
+
+    if (optionIdx === 0 && deltaX > 0) {
+      deltaX = deltaX * 0.15;
+    } else if (optionIdx === 1 && deltaX < 0) {
+      deltaX = deltaX * 0.15;
+    }
+
     dx.current = deltaX;
-    const card = cardRef.current;
-    if (card) {
-      card.style.transform = `translateX(${dx.current}px) rotate(${dx.current * 0.025}deg)`;
+    if (cardRef.current) {
+      cardRef.current.style.transform = `translateX(${dx.current}px) rotate(${dx.current * 0.025}deg)`;
+    }
+    if (nextCardRef.current) {
+      const isValidSwipe = (optionIdx === 0 && dx.current < 0) || (optionIdx === 1 && dx.current > 0);
+      const progress = isValidSwipe ? Math.min(Math.abs(dx.current) / 150, 1) : 0;
+      nextCardRef.current.style.transform = `scale(${0.95 + progress * 0.05})`;
+      nextCardRef.current.style.opacity = `${0.6 + progress * 0.4}`;
     }
   };
 
@@ -111,15 +197,19 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
     if (!dragging.current) return;
     dragging.current = false;
     dirLocked.current = null;
-    if (dx.current < -45) {
+    if (dx.current < -45 && optionIdx === 0) {
       triggerFlip(1);
-    } else if (dx.current > 45) {
+    } else if (dx.current > 45 && optionIdx === 1) {
       triggerFlip(-1);
     } else {
-      const card = cardRef.current;
-      if (card) {
-        card.style.transition = "transform .18s ease";
-        card.style.transform = "translateX(0) rotate(0deg)";
+      if (cardRef.current) {
+        cardRef.current.style.transition = "transform .18s ease";
+        cardRef.current.style.transform = "translateX(0) rotate(0deg)";
+      }
+      if (nextCardRef.current) {
+        nextCardRef.current.style.transition = "transform .18s ease, opacity .18s ease";
+        nextCardRef.current.style.transform = "scale(0.95)";
+        nextCardRef.current.style.opacity = "0.6";
       }
       if (Math.abs(dx.current) < 8 && !wasVertical.current) {
         setFlipped((f) => !f);
@@ -142,98 +232,51 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
         )}
       </div>
 
-      <div className="swipe-hint">
-        <i className="ti ti-chevron-left" />
-        <span>przesuń aby zmienić</span>
-        <i className="ti ti-chevron-right" />
-      </div>
+      <div className="card-window" style={{ position: "relative" }}>
+        <div
+          ref={nextCardRef}
+          className={`swipe-card ${isNextAiSelected ? "rec-style" : isNextAiAlternative ? "alt-style" : ""}`}
+          style={{
+            position: "absolute",
+            top: 0,
+            left: 0,
+            width: "100%",
+            height: "100%",
+            zIndex: 0,
+            transform: "scale(0.95)",
+            opacity: 0.6,
+            ...(aiChoice === undefined ? { background: '#fff', border: '1px solid var(--border)' } : {})
+          }}
+        >
+          <CardContent 
+            opt={nextOpt} 
+            flipped={false} 
+            aiChoice={aiChoice} 
+            isAiSelected={isNextAiSelected} 
+            aiReason={aiReason} 
+          />
+        </div>
 
-      <div className="card-window">
         <div
           ref={cardRef}
           className={`swipe-card ${isAiSelected ? "rec-style" : isAiAlternative ? "alt-style" : ""}`}
-          style={aiChoice === undefined ? { background: '#fff', border: '1px solid var(--border)' } : {}}
+          style={{
+            position: "relative",
+            zIndex: 1,
+            ...(aiChoice === undefined ? { background: '#fff', border: '1px solid var(--border)' } : {})
+          }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
-          <div className={`card-inner${flipped ? " flipped" : ""}`}>
-            {/* PRZÓD */}
-            <div className="card-face card-front">
-              <div
-                style={{
-                  display: "flex",
-                  alignItems: "flex-start",
-                  justifyContent: "space-between",
-                  marginBottom: 10,
-                }}
-              >
-                {aiChoice !== undefined ? (
-                  <div className={`card-label ${isAiSelected ? "ai-lbl" : "alt-lbl"}`}>
-                    <i
-                      className={`ti ${isAiSelected ? "ti-brain" : "ti-arrows-exchange"}`}
-                    />
-                    <span>{isAiSelected ? "Wybór AI" : "Alternatywa"}</span>
-                  </div>
-                ) : <div />}
-              </div>
-              <div className="card-name">{opt.name}</div>
-              <div
-                style={{
-                  display: "flex",
-                  gap: 5,
-                  flexWrap: "wrap",
-                  alignItems: "center",
-                  marginTop: 8,
-                }}
-              >
-                <span className="tag b">{opt.protein}g białka</span>
-                {opt.allergensText && (
-                  <span
-                    className="tag a"
-                    style={{ display: "flex", alignItems: "center", gap: 3 }}
-                  >
-                    <i
-                      className="ti ti-alert-triangle"
-                      style={{ fontSize: 9 }}
-                    />
-                    {opt.allergensText}
-                  </span>
-                )}
-              </div>
-              <div className="card-flip-hint">
-                <i className="ti ti-rotate-clockwise" />
-                <span>dotknij po szczegóły</span>
-              </div>
-            </div>
-
-            {/* TYŁ */}
-            <div className="card-face card-back">
-              {aiChoice !== undefined && (
-                <>
-                  <div className="card-back-hdr">
-                    <i className="ti ti-brain" />
-                    <span>Uzasadnienie AI</span>
-                  </div>
-                  <div className={`card-why ${isAiSelected ? "green" : "orange"}`}>
-                    {isAiSelected ? aiReason : "AI rekomendowało inną opcję dla Twoich objawów. To jest opcja alternatywna."}
-                  </div>
-                </>
-              )}
-              <div className="card-tags">
-                {opt.tags.map((tag) => (
-                  <span key={tag.t} className={`tag ${tag.c}`}>
-                    {tag.t}
-                  </span>
-                ))}
-              </div>
-              <span className="card-kcal">
-                {opt.kcal} kcal · {opt.protein}g B · {opt.carbs}g W · {opt.fat}g
-                T
-              </span>
-            </div>
-          </div>
+          <CardContent 
+            opt={opt} 
+            flipped={flipped} 
+            aiChoice={aiChoice} 
+            isAiSelected={isAiSelected} 
+            aiReason={aiReason} 
+          />
         </div>
       </div>
 
