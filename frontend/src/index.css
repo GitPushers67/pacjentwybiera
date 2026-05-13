@@ -3,24 +3,24 @@
 @tailwind utilities;
 
 :root {
-  --bg: #f0f8f8;
+  --bg: #F8FAFC;
   --card: #fff;
-  --orange: #2bbdb8;
-  --olight: #e4f5f5;
-  --omid: #96d9d7;
-  --text: #1a3535;
-  --text2: #5a7c7c;
-  --text3: #8aabab;
-  --border: #ceeae9;
-  --green: #2d7d5a;
-  --glight: #e8f5ee;
-  --gmid: #9fe1cb;
-  --red: #c0392b;
-  --rlight: #fdecea;
-  --amber: #d4870a;
-  --alight: #fef5e4;
-  --brand-orange: #f5a320;
-  --brand-orange-light: #fef3e0;
+  --orange: #F5A623;
+  --olight: #FFF6E5;
+  --omid: #FBD38D;
+  --text: #1E293B;
+  --text2: #475569;
+  --text3: #94A3B8;
+  --border: #E2E8F0;
+  --green: #10B981;
+  --glight: #D1FAE5;
+  --gmid: #6EE7B7;
+  --red: #EF4444;
+  --rlight: #FEE2E2;
+  --amber: #F59E0B;
+  --alight: #FEF3C7;
+  --brand-orange: #F97316;
+  --brand-orange-light: #FFEDD5;
 
   /* Meal Tracker Design Tokens */
   --meal-green: #3CAB8F;
@@ -133,7 +133,7 @@ ion-app {
 }
 
 .phone {
-  background: linear-gradient(rgba(240, 248, 248, 0.68), rgba(240, 248, 248, 0.68)), url('./assets/background.png') center/cover no-repeat;
+  background: linear-gradient(rgba(248, 250, 252, 0.85), rgba(248, 250, 252, 0.85)), url('./assets/background.png') center/cover no-repeat;
   width: 100%;
   max-width: 390px;
   height: 100%;
@@ -145,7 +145,7 @@ ion-app {
 
 @media (min-width: 500px) {
   .phone {
-    border-radius: 36px;
+    border-radius: 40px;
     height: 810px;
     border: 1px solid var(--border);
     box-shadow: 0 24px 64px rgba(0, 0, 0, 0.18);
@@ -262,7 +262,7 @@ ion-app {
 .orange-btn {
   width: 100%;
   padding: 13px;
-  border-radius: 14px;
+  border-radius: 18px;
   background: var(--orange);
   border: none;
   color: #fff;
@@ -275,7 +275,7 @@ ion-app {
 .outline-btn {
   width: 100%;
   padding: 11px;
-  border-radius: 14px;
+  border-radius: 18px;
   background: var(--card);
   border: 1.5px solid var(--border);
   color: var(--text2);
@@ -318,7 +318,7 @@ ion-app {
 .pred-banner {
   background: var(--olight);
   border: 1px solid var(--omid);
-  border-radius: 14px;
+  border-radius: 18px;
   padding: 12px 14px;
   margin: 0 16px 12px;
   flex-shrink: 0;
@@ -509,18 +509,21 @@ ion-app {
 .card-window {
   position: relative;
   overflow: hidden;
-  border-radius: 16px;
+  border-radius: 20px;
 }
 
 .swipe-card {
   position: relative;
   width: 100%;
-  border-radius: 16px;
-  padding: 13px;
+  border-radius: 20px;
+  padding: 18px;
   cursor: grab;
   will-change: transform;
   touch-action: pan-y;
   perspective: 1200px;
+  background: linear-gradient(145deg, #ffffff 0%, #fdfdfd 100%);
+  border: 1px solid var(--border);
+  box-shadow: 0 8px 24px rgba(0,0,0,0.04), 0 2px 8px rgba(0,0,0,0.02);
 }
 
 .card-inner {
@@ -541,32 +544,62 @@ ion-app {
   transform: rotateY(180deg);
 }
 
-.card-flip-hint {
+.card-swipe-header {
+  position: relative;
   display: flex;
+  justify-content: center;
   align-items: center;
-  gap: 4px;
-  margin-top: 10px;
-  opacity: 0.4;
+  gap: 8px;
+  height: 28px;
+  background: var(--bg);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  overflow: hidden;
 }
-.card-flip-hint i {
+.card-swipe-header span {
+  position: relative;
+  z-index: 1;
   font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+  color: var(--text2);
+}
+.card-swipe-header i {
+  font-size: 13px;
   color: var(--text3);
 }
-.card-flip-hint span {
+
+.card-flip-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--border);
+  color: var(--orange);
   font-size: 10px;
-  color: var(--text3);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-top: auto;
+}
+.card-flip-footer i {
+  font-size: 14px;
 }
 
 .swipe-card:active {
   cursor: grabbing;
 }
 .swipe-card.rec-style {
-  background: var(--glight);
-  border: 1.5px solid var(--green);
+  background: linear-gradient(145deg, var(--glight), #ffffff);
+  border: 2px solid var(--gmid);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.12);
 }
 .swipe-card.alt-style {
-  background: var(--olight);
-  border: 1.5px solid var(--orange);
+  background: linear-gradient(145deg, var(--olight), #ffffff);
+  border: 2px solid var(--omid);
+  box-shadow: 0 8px 24px rgba(245, 166, 35, 0.12);
 }
 
 .card-label {
@@ -636,7 +669,7 @@ ion-app {
 
 .card-name {
   font-size: 17px;
-  font-weight: 700;
+  font-weight: 600;
   color: var(--text);
   line-height: 1.35;
 }
@@ -716,7 +749,7 @@ ion-app {
 
 .summary-card {
   background: var(--card);
-  border-radius: 14px;
+  border-radius: 20px;
   border: 1px solid var(--border);
   padding: 13px;
   margin-bottom: 12px;
