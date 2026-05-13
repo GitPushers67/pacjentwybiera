@@ -31,63 +31,74 @@ interface SlotProps {
 }
 
 
-function CardContent({ opt, flipped, aiChoice, isAiSelected, aiReason }: any) {
+function CardContent({ opt, flipped, aiChoice, isAiSelected, aiReason, optionIdx }: any) {
+  const isLeftSwipe = optionIdx === 0;
+
   return (
     <div className={`card-inner${flipped ? " flipped" : ""}`}>
       {/* PRZÓD */}
-      <div className="card-face card-front">
-        <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 10 }}>
-          {aiChoice !== undefined ? (
-            <div className={`card-label ${isAiSelected ? "ai-lbl" : "alt-lbl"}`}>
+      <div className="card-face card-front" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <div className="card-swipe-header">
+          <i className="ti ti-chevron-left" />
+          <span>Przesuń, by zmienić</span>
+          <i className="ti ti-chevron-right" />
+        </div>
+        
+        <div style={{ flexGrow: 1, padding: "10px 0" }}>
+          {aiChoice !== undefined && (
+            <div className={`card-label ${isAiSelected ? "ai-lbl" : "alt-lbl"}`} style={{ marginBottom: 10 }}>
               <i className={`ti ${isAiSelected ? "ti-brain" : "ti-arrows-exchange"}`} />
               <span>{isAiSelected ? "Wybór AI" : "Alternatywa"}</span>
             </div>
-          ) : <div />}
-          <div style={{ display: "flex", gap: 3, opacity: 0.3, marginTop: 2 }}>
-            <i className="ti ti-chevron-left" style={{ fontSize: 13 }} />
-            <i className="ti ti-hand-two-fingers" style={{ fontSize: 15 }} />
-            <i className="ti ti-chevron-right" style={{ fontSize: 13 }} />
+          )}
+          <div className="card-name">{opt.name}</div>
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}>
+            <span className="tag b">{opt.protein}g białka</span>
+            {opt.allergensText && (
+              <span className="tag a" style={{ display: "flex", alignItems: "center", gap: 3 }}>
+                <i className="ti ti-alert-triangle" style={{ fontSize: 9 }} />
+                {opt.allergensText}
+              </span>
+            )}
           </div>
         </div>
-        <div className="card-name">{opt.name}</div>
-        <div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}>
-          <span className="tag b">{opt.protein}g białka</span>
-          {opt.allergensText && (
-            <span className="tag a" style={{ display: "flex", alignItems: "center", gap: 3 }}>
-              <i className="ti ti-alert-triangle" style={{ fontSize: 9 }} />
-              {opt.allergensText}
-            </span>
-          )}
-        </div>
-        <div className="card-flip-hint">
+
+        <div className="card-flip-footer">
           <i className="ti ti-rotate-clockwise" />
           <span>dotknij po szczegóły</span>
         </div>
       </div>
 
       {/* TYŁ */}
-      <div className="card-face card-back">
-        {aiChoice !== undefined && (
-          <>
-            <div className="card-back-hdr">
-              <i className="ti ti-brain" />
-              <span>Uzasadnienie AI</span>
-            </div>
-            <div className={`card-why ${isAiSelected ? "green" : "orange"}`}>
-              {isAiSelected ? aiReason : "AI rekomendowało inną opcję dla Twoich objawów. To jest opcja alternatywna."}
-            </div>
-          </>
-        )}
-        <div className="card-tags">
-          {opt.tags.map((tag: any) => (
-            <span key={tag.t} className={`tag ${tag.c}`}>
-              {tag.t}
-            </span>
-          ))}
+      <div className="card-face card-back" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+        <div style={{ flexGrow: 1, paddingBottom: 10 }}>
+          {aiChoice !== undefined && (
+            <>
+              <div className="card-back-hdr">
+                <i className="ti ti-brain" />
+                <span>Uzasadnienie AI</span>
+              </div>
+              <div className={`card-why ${isAiSelected ? "green" : "orange"}`}>
+                {isAiSelected ? aiReason : "AI rekomendowało inną opcję dla Twoich objawów. To jest opcja alternatywna."}
+              </div>
+            </>
+          )}
+          <div className="card-tags">
+            {opt.tags.map((tag: any) => (
+              <span key={tag.t} className={`tag ${tag.c}`}>
+                {tag.t}
+              </span>
+            ))}
+          </div>
+          <span className="card-kcal">
+            {opt.kcal} kcal · {opt.protein}g B · {opt.carbs}g W · {opt.fat}g T
+          </span>
         </div>
-        <span className="card-kcal">
-          {opt.kcal} kcal · {opt.protein}g B · {opt.carbs}g W · {opt.fat}g T
-        </span>
+        
+        <div className="card-flip-footer">
+          <i className="ti ti-arrow-back-up" />
+          <span>wróć do dania</span>
+        </div>
       </div>
     </div>
   );
@@ -127,9 +138,10 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
       card.style.opacity = "0";
       card.style.boxShadow = "";
       if (nextCard) {
-        nextCard.style.transition = "transform .22s ease, opacity .22s ease";
+        nextCard.style.transition = "transform .22s ease, opacity .22s ease, filter .22s ease";
         nextCard.style.transform = "scale(1)";
         nextCard.style.opacity = "1";
+        nextCard.style.filter = "blur(0px)";
       }
       setTimeout(() => {
         onFlip(dir);
@@ -145,6 +157,7 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
             nextCard.style.transition = "none";
             nextCard.style.transform = "scale(0.95)";
             nextCard.style.opacity = "0.6";
+            nextCard.style.filter = "blur(4px)";
           }
         });
       }, 220);
@@ -194,6 +207,7 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
       const progress = isValidSwipe ? Math.min(Math.abs(dx.current) / 150, 1) : 0;
       nextCardRef.current.style.transform = `scale(${0.95 + progress * 0.05})`;
       nextCardRef.current.style.opacity = `${0.6 + progress * 0.4}`;
+      nextCardRef.current.style.filter = `blur(${4 - progress * 4}px)`;
     }
   };
 
@@ -212,9 +226,10 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
         cardRef.current.style.boxShadow = "";
       }
       if (nextCardRef.current) {
-        nextCardRef.current.style.transition = "transform .18s ease, opacity .18s ease";
+        nextCardRef.current.style.transition = "transform .18s ease, opacity .18s ease, filter .18s ease";
         nextCardRef.current.style.transform = "scale(0.95)";
         nextCardRef.current.style.opacity = "0.6";
+        nextCardRef.current.style.filter = "blur(4px)";
       }
       if (Math.abs(dx.current) < 8 && !wasVertical.current) {
         setFlipped((f) => !f);
@@ -250,6 +265,7 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
             zIndex: 0,
             transform: "scale(0.95)",
             opacity: 0.6,
+            filter: "blur(4px)",
             ...(aiChoice === undefined ? { background: '#fff', border: '1px solid var(--border)' } : {})
           }}
         >
@@ -259,6 +275,7 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
             aiChoice={aiChoice} 
             isAiSelected={isNextAiSelected} 
             aiReason={aiReason} 
+            optionIdx={nextIdx}
           />
         </div>
 
@@ -281,6 +298,7 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
             aiChoice={aiChoice} 
             isAiSelected={isAiSelected} 
             aiReason={aiReason} 
+            optionIdx={optionIdx}
           />
         </div>
       </div>
