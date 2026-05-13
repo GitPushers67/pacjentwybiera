@@ -42,7 +42,7 @@ function CardContent({ opt, flipped, aiChoice, isAiSelected, aiReason }: any) {
           <i className="ti ti-chevron-right" />
         </div>
         
-        <div style={{ flexGrow: 1, padding: "10px 0" }}>
+        <div style={{ flexGrow: 1, padding: "16px 18px" }}>
           {aiChoice !== undefined && (
             <div className={`card-label ${isAiSelected ? "ai-lbl" : "alt-lbl"}`} style={{ marginBottom: 10 }}>
               <i className={`ti ${isAiSelected ? "ti-brain" : "ti-arrows-exchange"}`} />
@@ -69,7 +69,7 @@ function CardContent({ opt, flipped, aiChoice, isAiSelected, aiReason }: any) {
 
       {/* TYŁ */}
       <div className="card-face card-back" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <div style={{ flexGrow: 1, paddingBottom: 10 }}>
+        <div style={{ flexGrow: 1, padding: "16px 18px" }}>
           {aiChoice !== undefined && (
             <>
               <div className="card-back-hdr">
