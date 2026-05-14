@@ -59,7 +59,7 @@ export default function OnboardingScreen({ navigate, onComplete }: Props) {
     };
     await upsertPatient(profile);
     onComplete(profile);
-    navigate('welcome');
+    navigate('home');
   };
 
   return (

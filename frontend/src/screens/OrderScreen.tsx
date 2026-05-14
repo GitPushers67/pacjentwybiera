@@ -344,10 +344,6 @@ export default function OrderScreen({
     ]).then(([meals, logs]) => {
       setApiMeals(meals);
       setOrderMeals(meals);
-      if (logs.length > 0 && !editMode) {
-        navigate('confirm');
-        return;
-      }
       if (logs.length > 0 && meals) {
         const restored: Record<string, number> = {};
         for (const log of logs) {
@@ -359,7 +355,7 @@ export default function OrderScreen({
       setLoading(false);
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [orderDateStr, editMode]);
+  }, [orderDateStr]);
 
   const activeMeals = apiMeals ?? fallbackMeals;
 

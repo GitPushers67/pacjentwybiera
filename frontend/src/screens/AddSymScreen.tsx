@@ -38,6 +38,10 @@ export default function AddSymScreen({
   symptomHistory,
   setSymptomHistory,
 }: Props) {
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todayHistory = symptomHistory.filter(e => new Date(e.addedAt) >= todayStart);
+
   const [modalSym, setModalSym] = useState<string | null>(null);
   const [symIntensity, setSymIntensity] = useState<Record<string, number>>({});
   const [symNotes, setSymNotes] = useState<Record<string, string>>({});
@@ -80,7 +84,8 @@ export default function AddSymScreen({
   const removeFromHistory = async (entry: SymptomHistoryEntry) => {
     const remaining = symptomHistory.filter((e) => e !== entry);
     setSymptomHistory(remaining);
-    if (!remaining.some((e) => e.key === entry.key)) {
+    const todayRemaining = remaining.filter(e => new Date(e.addedAt) >= todayStart);
+    if (!todayRemaining.some((e) => e.key === entry.key)) {
       setSymptoms(symptoms.filter((s) => s !== entry.key));
     }
     if (entry.id) {
@@ -200,7 +205,7 @@ export default function AddSymScreen({
           >
             Historia dnia
           </div>
-          {symptomHistory.length === 0 ? (
+          {todayHistory.length === 0 ? (
             <div
               style={{
                 background: "var(--card)",
@@ -215,7 +220,7 @@ export default function AddSymScreen({
             </div>
           ) : (
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-              {symptomHistory.map((entry, idx) => {
+              {todayHistory.map((entry, idx) => {
                 const symptom = ALL_SYMPTOMS.find((s) => s.key === entry.key);
                 const displayLabel =
                   symptom?.label ??

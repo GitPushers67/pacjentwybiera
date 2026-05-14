@@ -19,7 +19,6 @@ interface Props {
   navigate: (s: Screen) => void;
   symptoms: string[];
   setSymptoms: (s: string[]) => void;
-  wellbeing: number;
   choices: Record<string, number>;
   eatenMap: Record<string, EatenStatus>;
   setEatenMap: Dispatch<SetStateAction<Record<string, EatenStatus>>>;

@@ -16,7 +16,6 @@ import OrderScreen from "./screens/OrderScreen";
 import AddSymScreen from "./screens/AddSymScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import ConfirmScreen from "./screens/ConfirmScreen";
-import WelcomeScreen from "./screens/WelcomeScreen";
 import AllergensScreen from "./screens/AllergensScreen";
 import NutritionScreen from "./screens/NutritionScreen";
 import ChatScreen from "./screens/ChatScreen";
@@ -55,7 +54,6 @@ export default function App() {
   const [symptoms, setSymptoms] = useState<string[]>(DEV_MODE ? ["nausea"] : []);
   const [choices, setChoices] = useState<Record<string, number>>({});
   const [orderMeals, setOrderMeals] = useState<Meal[] | null>(null);
-  const [wellbeing, setWellbeing] = useState(6);
   const [symptomHistory, setSymptomHistory] = useState<SymptomHistoryEntry[]>([]);
   const [eatenMap, setEatenMap] = useState<Record<string, EatenStatus>>({});
   const [editingOrder, setEditingOrder] = useState(false);
@@ -100,7 +98,10 @@ export default function App() {
 
     setPatient(profile);
     setSymptomHistory(entries);
-    setSymptoms([...new Set(entries.map((e) => e.key))]);
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEntries = entries.filter(e => new Date(e.addedAt) >= todayStart);
+    setSymptoms([...new Set(todayEntries.map((e) => e.key))]);
     setScreen("home");
   }
 
@@ -151,22 +152,11 @@ export default function App() {
               onComplete={handleOnboardingComplete}
             />
           )}
-          {screen === "welcome" && patient && (
-            <WelcomeScreen
-              navigate={navigate}
-              wellbeing={wellbeing}
-              setWellbeing={setWellbeing}
-              symptoms={symptoms}
-              setSymptoms={setSymptoms}
-              patientName={patient.firstName}
-            />
-          )}
-          {screen === "home" && patient && (
+{screen === "home" && patient && (
             <HomeScreen
               navigate={navigate}
               symptoms={symptoms}
               setSymptoms={setSymptoms}
-              wellbeing={wellbeing}
               choices={choices}
               eatenMap={eatenMap}
               setEatenMap={setEatenMap}

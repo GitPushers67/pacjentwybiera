@@ -76,7 +76,7 @@ export interface MealCardState {
 
 export type Screen =
   | 'login' | 'onboarding' | 'home' | 'plan' | 'order' | 'add-sym' | 'profile'
-  | 'confirm' | 'welcome' | 'allergens' | 'nutrition' | 'chat';
+  | 'confirm' | 'allergens' | 'nutrition' | 'chat';
 
 export type SymptomKey =
   | 'nausea' | 'taste' | 'diarrhea' | 'mouth' | 'const'
