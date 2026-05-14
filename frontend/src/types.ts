@@ -75,7 +75,7 @@ export interface MealCardState {
 }
 
 export type Screen =
-  | 'onboarding' | 'home' | 'plan' | 'order' | 'add-sym' | 'profile'
+  | 'login' | 'onboarding' | 'home' | 'plan' | 'order' | 'add-sym' | 'profile'
   | 'confirm' | 'welcome' | 'allergens' | 'nutrition' | 'chat';
 
 export type SymptomKey =
@@ -88,6 +88,7 @@ export interface SymptomEntry {
 }
 
 export interface SymptomHistoryEntry {
+  id?: string;
   key: string;
   addedAt: string;
   scale: number;

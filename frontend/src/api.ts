@@ -53,6 +53,19 @@ function mapDish(dish: any, isRec: boolean, slotIcon: string) {
   };
 }
 
+export async function fetchMenuForDateCached(dateStr: string): Promise<Meal[] | null> {
+  const key = `menu_cache_${dateStr}`;
+  try {
+    const cached = sessionStorage.getItem(key);
+    if (cached) return JSON.parse(cached) as Meal[];
+  } catch { /* ignore */ }
+  const result = await fetchMenuForDate(dateStr);
+  if (result) {
+    try { sessionStorage.setItem(key, JSON.stringify(result)); } catch { /* ignore */ }
+  }
+  return result;
+}
+
 export async function fetchMenuForDate(dateStr: string): Promise<Meal[] | null> {
   const url = new URL(API_BASE);
   url.searchParams.set('dietId',                '2388');

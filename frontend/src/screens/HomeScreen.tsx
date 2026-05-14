@@ -9,10 +9,11 @@ import Navbar from "../components/Navbar";
 import { MealCard } from "../components/MealCard";
 import type { EatenStatus, Meal, PatientProfile, Screen, MealCardState } from "../types";
 import { meals as fallbackMeals } from "../data";
-import { getToday, formatDateForAPI } from "../utils";
-import { fetchMenuForDate } from "../api";
+import { getToday, formatDateForAPI, addDays } from "../utils";
+import { fetchMenuForDateCached } from "../api";
 import logo from "../assets/logo.png";
 import TopbarDate from "../components/TopbarDate";
+import { ensureDayMeals, getMealLogs, updateMealStatus } from "../services/mealLogs";
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -41,11 +42,43 @@ export default function HomeScreen({
 }: Props) {
   const [apiMeals, setApiMeals] = useState<Meal[] | null>(null);
   const [mealStates, setMealStates] = useState<Record<string, MealCardState>>({});
+  const [mealLogIds, setMealLogIds] = useState<Record<string, string>>({});
 
   const today = useMemo(() => getToday(), []);
 
   useEffect(() => {
-    fetchMenuForDate(formatDateForAPI(today)).then(setApiMeals);
+    const dateStr = formatDateForAPI(today);
+
+    fetchMenuForDateCached(dateStr).then(async (fetchedMeals) => {
+      const mealsForMapping = fetchedMeals ?? fallbackMeals;
+      if (fetchedMeals) setApiMeals(fetchedMeals);
+
+      const logs = fetchedMeals
+        ? await ensureDayMeals(dateStr, fetchedMeals)
+        : await getMealLogs(dateStr);
+
+      const idMap: Record<string, string> = {};
+      const states: Record<string, MealCardState> = {};
+      for (const log of logs) {
+        const meal = mealsForMapping.find((m) => m.title === log.meal_slot);
+        if (meal) {
+          idMap[meal.id] = log.id;
+          states[meal.id] = {
+            status: log.status,
+            partialPct: log.partial_pct ?? 50,
+            showPlate: false,
+          };
+        }
+      }
+      setMealLogIds(idMap);
+      setMealStates(states);
+
+      // prefetch + pre-populate DB dla pojutrza w tle
+      const dayAfterTomorrow = formatDateForAPI(addDays(today, 2));
+      fetchMenuForDateCached(dayAfterTomorrow).then((futureMeals) => {
+        if (futureMeals) ensureDayMeals(dayAfterTomorrow, futureMeals);
+      });
+    });
   }, [today]);
 
   const meals = apiMeals ?? fallbackMeals;
@@ -67,20 +100,18 @@ export default function HomeScreen({
   };
 
   const handleSetMealStatus = (mealId: string, status: MealCardState["status"]) => {
+    const partialPct = status === "eaten" ? 100 : (mealStates[mealId]?.partialPct ?? 50);
+
     setMealStates((prev) => ({
       ...prev,
-      [mealId]: {
-        ...getMealState(mealId, prev),
-        ...prev[mealId],
-        status,
-        showPlate: false,
-        partialPct:
-          status === "eaten"
-            ? 100
-            : (prev[mealId]?.partialPct ?? getMealState(mealId, prev).partialPct ?? 50),
-      },
+      [mealId]: { ...prev[mealId], status, showPlate: false, partialPct },
     }));
     setEatenMap((prev) => ({ ...prev, [mealId]: status === "eaten" ? "full" : "none" }));
+
+    const logId = mealLogIds[mealId];
+    if (logId) {
+      updateMealStatus(logId, status, status === "partial" ? partialPct : undefined);
+    }
   };
 
   const handleUpdatePartialPct = (mealId: string, pct: number) => {

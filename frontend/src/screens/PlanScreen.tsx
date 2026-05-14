@@ -6,9 +6,9 @@ import {
   formatDateShortPL, formatDateForAPI,
   getOption,
 } from '../utils';
-import { fetchMenuForDate } from '../api';
+import { fetchMenuForDateCached } from '../api';
 import TopbarDate from '../components/TopbarDate';
-import { pastMockSymptoms } from '../data';
+import { getMealLogsRange, type MealLog } from '../services/mealLogs';
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -48,46 +48,6 @@ const BADGE_LABEL: Record<string, string> = {
   'rekomendowane': 'Rekomendowane',
 };
 
-type PastBadge = { badge: string; bc: 'g' | 'o' | '' };
-
-const PAST_DAY_BADGES: Record<number, PastBadge[]> = {
-  [-4]: [
-    { badge: 'zjedzone',     bc: 'g' },
-    { badge: 'zjedzone',     bc: 'g' },
-    { badge: 'zjedzone',     bc: 'g' },
-    { badge: 'częściowo',    bc: 'o' },
-    { badge: 'zjedzone',     bc: 'g' },
-    { badge: 'nie zjedzone', bc: ''  },
-    { badge: 'zjedzone',     bc: 'g' },
-  ],
-  [-1]: [
-    { badge: 'zjedzone',     bc: 'g' },
-    { badge: 'zjedzone',     bc: 'g' },
-    { badge: 'częściowo',    bc: 'o' },
-    { badge: 'zjedzone',     bc: 'g' },
-    { badge: 'nie zjedzone', bc: ''  },
-    { badge: 'zjedzone',     bc: 'g' },
-    { badge: 'zjedzone',     bc: 'g' },
-  ],
-  [-2]: [
-    { badge: 'zjedzone',     bc: 'g' },
-    { badge: 'częściowo',    bc: 'o' },
-    { badge: 'zjedzone',     bc: 'g' },
-    { badge: 'zjedzone',     bc: 'g' },
-    { badge: 'zjedzone',     bc: 'g' },
-    { badge: 'nie zjedzone', bc: ''  },
-    { badge: 'zjedzone',     bc: 'g' },
-  ],
-  [-3]: [
-    { badge: 'zjedzone',     bc: 'g' },
-    { badge: 'zjedzone',     bc: 'g' },
-    { badge: 'nie zjedzone', bc: ''  },
-    { badge: 'zjedzone',     bc: 'g' },
-    { badge: 'częściowo',    bc: 'o' },
-    { badge: 'zjedzone',     bc: 'g' },
-    { badge: 'zjedzone',     bc: 'g' },
-  ],
-};
 
 const MEAL_HOURS: Record<string, number> = {
   'OnkoShot':     7,
@@ -139,7 +99,6 @@ type TimelineEntry =
 
 function buildTimeline(
   meals: PlanMeal[],
-  offset: number,
   symptomHistory: SymptomHistoryEntry[],
   selectedDate: Date,
 ): TimelineEntry[] {
@@ -150,21 +109,24 @@ function buildTimeline(
     meal: m,
   }));
 
-  if (offset >= -4 && offset <= -1) {
-    for (const s of (pastMockSymptoms[offset] ?? [])) {
-      entries.push({ kind: 'symptom', hour: s.hour, minute: s.minute, key: s.key, scale: s.scale, note: s.note });
-    }
-  } else if (offset === 0) {
-    const todayStr = selectedDate.toDateString();
-    for (const e of symptomHistory) {
-      const d = new Date(e.addedAt);
-      if (d.toDateString() === todayStr) {
-        entries.push({ kind: 'symptom', hour: d.getHours(), minute: d.getMinutes(), key: e.key, scale: e.scale, note: e.note });
-      }
+  const dateStr = selectedDate.toDateString();
+  for (const e of symptomHistory) {
+    const d = new Date(e.addedAt);
+    if (d.toDateString() === dateStr) {
+      entries.push({ kind: 'symptom', hour: d.getHours(), minute: d.getMinutes(), key: e.key, scale: e.scale, note: e.note });
     }
   }
 
   return entries.sort((a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute));
+}
+
+function statusToBadge(status: MealLog['status']): { badge: string; bc: 'g' | 'o' | '' } {
+  switch (status) {
+    case 'eaten':     return { badge: 'zjedzone',     bc: 'g' };
+    case 'partial':   return { badge: 'częściowo',    bc: 'o' };
+    case 'not_eaten': return { badge: 'nie zjedzone', bc: ''  };
+    default:          return { badge: 'oczekuje',     bc: 'o' };
+  }
 }
 
 function apiMealsToPlanMeals(
@@ -185,12 +147,23 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
   const [selectedOffset, setSelectedOffset] = useState(0);
   const [fetchedMeals, setFetchedMeals] = useState<Record<number, Meal[] | null>>({});
   const [expandedMacros, setExpandedMacros] = useState<Set<string>>(new Set());
+  const [pastLogs, setPastLogs] = useState<Record<string, MealLog[]>>({});
 
   useEffect(() => {
-    [-4, -3, -2, -1, 0, 1].forEach((offset) => {
-      fetchMenuForDate(formatDateForAPI(addDays(today, offset))).then((meals) =>
+    [-3, -2, -1, 0, 1, 2].forEach((offset) => {
+      fetchMenuForDateCached(formatDateForAPI(addDays(today, offset))).then((meals) =>
         setFetchedMeals((prev) => ({ ...prev, [offset]: meals })),
       );
+    });
+    const from = formatDateForAPI(addDays(today, -3));
+    const to   = formatDateForAPI(addDays(today, 2));
+    getMealLogsRange(from, to).then((logs) => {
+      const grouped: Record<string, MealLog[]> = {};
+      for (const log of logs) {
+        if (!grouped[log.date]) grouped[log.date] = [];
+        grouped[log.date].push(log);
+      }
+      setPastLogs(grouped);
     });
   }, [today]);
 
@@ -208,7 +181,7 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
 
   const dayEntries = useMemo(() =>
     Array.from({ length: 7 }, (_, i) => {
-      const offset = i - 4;
+      const offset = i - 3;
       const d = addDays(today, offset);
       const dow = d.getDay();
       return {
@@ -223,17 +196,22 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
 
   const selectedDate = addDays(today, selectedOffset);
   const hasOrdered = orderMeals !== null && Object.keys(choices).length > 0;
+  const orderingDateStr = formatDateForAPI(addDays(today, 2));
+  const isOrdered = hasOrdered || (pastLogs[orderingDateStr] ?? []).length > 0;
 
   const day: PlanDay = useMemo(() => {
-    if (selectedOffset >= -4 && selectedOffset <= -1) {
-      const meals = fetchedMeals[selectedOffset];
+    if (selectedOffset >= -3 && selectedOffset <= -1) {
+      const apiMeals = fetchedMeals[selectedOffset];
+      const dateStr = formatDateForAPI(selectedDate);
+      const logsForDay = pastLogs[dateStr] ?? [];
       return {
         label: PAST_LABELS[selectedOffset],
         sub: formatDateShortPL(selectedDate),
-        meals: meals
-          ? meals.map((m, i) => {
-              const opt = m.options[0];
-              const { badge, bc } = PAST_DAY_BADGES[selectedOffset]?.[i] ?? { badge: 'zjedzone', bc: 'g' as const };
+        meals: apiMeals
+          ? apiMeals.map((m) => {
+              const log = logsForDay.find((l) => l.meal_slot === m.title);
+              const opt = log ? (m.options[log.option_index] ?? m.options[0]) : m.options[0];
+              const { badge, bc } = log ? statusToBadge(log.status) : { badge: 'oczekuje', bc: 'o' as const };
               return { emoji: opt.emoji, type: m.title, name: opt.name, kcal: opt.kcal, protein: opt.protein, carbs: opt.carbs, fat: opt.fat, badge, bc };
             })
           : [],
@@ -241,12 +219,19 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
     }
 
     if (selectedOffset === 0) {
-      const meals = fetchedMeals[0];
+      const apiMeals = fetchedMeals[0];
+      const dateStr = formatDateForAPI(selectedDate);
+      const logsForDay = pastLogs[dateStr] ?? [];
       return {
         label: 'Dzisiejsze menu',
-        sub: 'Posiłki zostały zamówione wcześniej — serwowane dziś',
-        meals: meals
-          ? apiMealsToPlanMeals(meals, 'zamówiono', 'g')
+        sub: formatDateShortPL(selectedDate),
+        meals: apiMeals
+          ? apiMeals.map((m) => {
+              const log = logsForDay.find((l) => l.meal_slot === m.title);
+              const opt = log ? (m.options[log.option_index] ?? m.options[0]) : m.options[0];
+              const { badge, bc } = log ? statusToBadge(log.status) : { badge: 'oczekuje', bc: 'o' as const };
+              return { emoji: opt.emoji, type: m.title, name: opt.name, kcal: opt.kcal, protein: opt.protein, carbs: opt.carbs, fat: opt.fat, badge, bc };
+            })
           : [],
       };
     }
@@ -268,11 +253,21 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
     }
 
     if (selectedOffset === 2) {
-      if (hasOrdered) {
+      const apiMeals2 = fetchedMeals[2];
+      const logsForDay2 = pastLogs[orderingDateStr] ?? [];
+
+      if (isOrdered) {
+        const meals = logsForDay2.length > 0 && apiMeals2
+          ? apiMeals2.map((m) => {
+              const log = logsForDay2.find((l) => l.meal_slot === m.title);
+              const opt = log ? (m.options[log.option_index] ?? m.options[0]) : m.options[0];
+              return { emoji: opt.emoji, type: m.title, name: opt.name, kcal: opt.kcal, protein: opt.protein, carbs: opt.carbs, fat: opt.fat, badge: 'zamówiono', bc: 'g' as const };
+            })
+          : apiMealsToPlanMeals(orderMeals!, 'zamówiono', 'g', choices);
         return {
           label: `Posiłki na ${formatDateShortPL(selectedDate)}`,
-          sub: 'Twój wybór — zamówienie złożone',
-          meals: apiMealsToPlanMeals(orderMeals!, 'wybrane', 'g', choices),
+          sub: 'Zamówienie złożone — możesz edytować do 20:00',
+          meals,
         };
       }
       return {
@@ -303,11 +298,11 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
         { emoji: '—', type: 'OnkoShot',     name: 'Dostępne wkrótce', kcal: 0, badge: 'wkrótce', bc: '' },
       ],
     };
-  }, [selectedOffset, selectedDate, fetchedMeals, hasOrdered, orderMeals, choices]);
+  }, [selectedOffset, selectedDate, fetchedMeals, isOrdered, orderMeals, choices, pastLogs, orderingDateStr]);
 
   const timeline = useMemo(() => {
     if (selectedOffset > 0) return [];
-    return buildTimeline(day.meals, selectedOffset, symptomHistory, selectedDate);
+    return buildTimeline(day.meals, symptomHistory, selectedDate);
   }, [day.meals, selectedOffset, symptomHistory, selectedDate]);
 
   const isHistory = selectedOffset < 0;
@@ -547,9 +542,23 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
         ))}
 
         {/* ── CTA for orderable day ─────────────────────── */}
-        {selectedOffset === 2 && !hasOrdered && (
+        {selectedOffset === 2 && !isOrdered && (
           <button className="orange-btn" style={{ marginTop: 8 }} onClick={() => navigate('order')}>
             Wybierz dania →
+          </button>
+        )}
+        {selectedOffset === 2 && isOrdered && (
+          <button
+            style={{
+              marginTop: 8, width: '100%', padding: '13px 0', borderRadius: 14,
+              border: '1.5px solid var(--omid)', background: 'var(--bg)',
+              color: 'var(--orange)', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+            }}
+            onClick={() => navigate('order')}
+          >
+            <i className="ti ti-edit" style={{ fontSize: 15 }} />
+            Edytuj zamówienie
           </button>
         )}
       </div>

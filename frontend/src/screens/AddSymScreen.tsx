@@ -3,6 +3,7 @@ import SymptomModal from "../components/SymptomModal";
 import Navbar from "../components/Navbar";
 import type { Screen, SymptomHistoryEntry } from "../types";
 import TopbarDate from "../components/TopbarDate";
+import { addSymptomEntry, deleteSymptomEntry } from "../services/symptoms";
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -53,50 +54,64 @@ export default function AddSymScreen({
     setModalSym(key);
   };
 
-  const saveModal = () => {
+  const saveModal = async () => {
     if (!modalSym) return;
-    setSymptomHistory((prev) => [
-      {
-        key: modalSym,
-        addedAt: new Date().toISOString(),
-        scale: symIntensity[modalSym] ?? 50,
-        note: symNotes[modalSym]?.trim() || undefined,
-      },
-      ...prev,
-    ]);
+    const now = new Date().toISOString();
+    const optimistic: SymptomHistoryEntry = {
+      key: modalSym,
+      addedAt: now,
+      scale: symIntensity[modalSym] ?? 50,
+      note: symNotes[modalSym]?.trim() || undefined,
+    };
+    setSymptomHistory((prev) => [optimistic, ...prev]);
     if (!symptoms.includes(modalSym)) {
       setSymptoms([...symptoms, modalSym]);
     }
     setModalSym(null);
-  };
 
-  const removeFromHistory = (addedAt: string) => {
-    const entry = symptomHistory.find((e) => e.addedAt === addedAt);
-    const remaining = symptomHistory.filter((e) => e.addedAt !== addedAt);
-    setSymptomHistory(remaining);
-    if (entry && !remaining.some((e) => e.key === entry.key)) {
-      setSymptoms(symptoms.filter((s) => s !== entry.key));
+    const saved = await addSymptomEntry(optimistic);
+    if (saved) {
+      setSymptomHistory((prev) =>
+        prev.map((e) => (e.addedAt === now && e.key === modalSym ? { ...e, id: saved.id } : e)),
+      );
     }
   };
 
-  const saveCustom = () => {
+  const removeFromHistory = async (entry: SymptomHistoryEntry) => {
+    const remaining = symptomHistory.filter((e) => e !== entry);
+    setSymptomHistory(remaining);
+    if (!remaining.some((e) => e.key === entry.key)) {
+      setSymptoms(symptoms.filter((s) => s !== entry.key));
+    }
+    if (entry.id) {
+      await deleteSymptomEntry(entry.id);
+    }
+  };
+
+  const saveCustom = async () => {
     const name = customName.trim();
     if (!name) return;
     const key = `custom_${name}`;
-    setSymptomHistory((prev) => [
-      {
-        key,
-        addedAt: new Date().toISOString(),
-        scale: customIntensity,
-        note: customNote.trim() || undefined,
-      },
-      ...prev,
-    ]);
+    const now = new Date().toISOString();
+    const optimistic: SymptomHistoryEntry = {
+      key,
+      addedAt: now,
+      scale: customIntensity,
+      note: customNote.trim() || undefined,
+    };
+    setSymptomHistory((prev) => [optimistic, ...prev]);
     if (!symptoms.includes(key)) setSymptoms([...symptoms, key]);
     setShowCustomModal(false);
     setCustomName("");
     setCustomIntensity(50);
     setCustomNote("");
+
+    const saved = await addSymptomEntry(optimistic);
+    if (saved) {
+      setSymptomHistory((prev) =>
+        prev.map((e) => (e.addedAt === now && e.key === key ? { ...e, id: saved.id } : e)),
+      );
+    }
   };
 
   const activeSym = ALL_SYMPTOMS.find((s) => s.key === modalSym);
@@ -289,7 +304,7 @@ export default function AddSymScreen({
                       )}
                     </div>
                     <button
-                      onClick={() => removeFromHistory(entry.addedAt)}
+                      onClick={() => removeFromHistory(entry)}
                       style={{
                         background: "var(--rlight)",
                         border: "1px solid var(--red)",

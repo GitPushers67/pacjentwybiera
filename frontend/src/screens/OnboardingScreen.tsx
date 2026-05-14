@@ -2,6 +2,7 @@ import { useState } from 'react';
 import type { Screen, PatientProfile } from '../types';
 import { allergensList } from '../data';
 import logo from '../assets/logo.png';
+import { upsertPatient } from '../services/patients';
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -45,7 +46,7 @@ export default function OnboardingScreen({ navigate, onComplete }: Props) {
     setAllergens(allergens.includes(key) ? allergens.filter(a => a !== key) : [...allergens, key]);
   };
 
-  const handleComplete = () => {
+  const handleComplete = async () => {
     const profile: PatientProfile = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
@@ -56,6 +57,7 @@ export default function OnboardingScreen({ navigate, onComplete }: Props) {
       treatmentType,
       allergens,
     };
+    await upsertPatient(profile);
     onComplete(profile);
     navigate('welcome');
   };

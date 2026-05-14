@@ -8,8 +8,9 @@ import {
   formatDateForAPI,
   formatDateLongPL,
 } from "../utils";
-import { fetchMenuForDate, fetchAiRecommendation } from "../api";
+import { fetchMenuForDateCached, fetchAiRecommendation } from "../api";
 import TopbarDate from "../components/TopbarDate";
+import { upsertMealLog, getMealLogs } from "../services/mealLogs";
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -20,6 +21,7 @@ interface Props {
   symptoms: string[];
   symptomHistory: SymptomHistoryEntry[];
   eatenMap: Record<string, EatenStatus>;
+  editMode: boolean;
 }
 
 interface SlotProps {
@@ -318,6 +320,7 @@ export default function OrderScreen({
   symptoms,
   symptomHistory,
   eatenMap,
+  editMode,
 }: Props) {
   const [apiMeals, setApiMeals] = useState<Meal[] | null>(null);
   const [loading, setLoading] = useState(true);
@@ -335,12 +338,28 @@ export default function OrderScreen({
   );
 
   useEffect(() => {
-    fetchMenuForDate(orderDateStr).then((result) => {
-      setApiMeals(result);
-      setOrderMeals(result);
+    Promise.all([
+      fetchMenuForDateCached(orderDateStr),
+      getMealLogs(orderDateStr),
+    ]).then(([meals, logs]) => {
+      setApiMeals(meals);
+      setOrderMeals(meals);
+      if (logs.length > 0 && !editMode) {
+        navigate('confirm');
+        return;
+      }
+      if (logs.length > 0 && meals) {
+        const restored: Record<string, number> = {};
+        for (const log of logs) {
+          const meal = meals.find((m) => m.title === log.meal_slot);
+          if (meal) restored[meal.id] = log.option_index;
+        }
+        setChoices({ ...choices, ...restored });
+      }
       setLoading(false);
     });
-  }, [orderDateStr, setOrderMeals]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [orderDateStr, editMode]);
 
   const activeMeals = apiMeals ?? fallbackMeals;
 
@@ -386,6 +405,23 @@ export default function OrderScreen({
     }
   };
 
+  const handlePlaceOrder = async () => {
+    await Promise.all(
+      activeMeals.map((meal) => {
+        const optIdx = choices[meal.id] ?? 0;
+        const opt = getOption(meal, optIdx);
+        return upsertMealLog({
+          date: orderDateStr,
+          meal_slot: meal.title,
+          meal_name: opt.name,
+          option_index: optIdx,
+          status: 'pending',
+        });
+      }),
+    );
+    navigate("confirm");
+  };
+
   const totalProtein = activeMeals.reduce(
     (sum, m) => sum + getOption(m, choices[m.id] ?? 0).protein,
     0,
@@ -421,9 +457,9 @@ export default function OrderScreen({
           <button
             className="orange-btn"
             style={{ flex: 1, width: "auto", margin: 0, padding: "11px 0" }}
-            onClick={() => navigate("confirm")}
+            onClick={handlePlaceOrder}
           >
-            Złóż zamówienie
+            {editMode ? "Zapisz zmiany" : "Złóż zamówienie"}
           </button>
           <button
             style={{

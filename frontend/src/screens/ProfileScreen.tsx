@@ -3,6 +3,7 @@ import Navbar from '../components/Navbar';
 import type { Screen, PatientProfile } from '../types';
 import { allergensList, getDailyTargets } from '../data';
 import TopbarDate from '../components/TopbarDate';
+import { signOut } from '../services/auth';
 
 const TREATMENT_LABELS: Record<string, string> = {
   chemo: 'Chemioterapia',
@@ -161,6 +162,29 @@ export default function ProfileScreen({ navigate, patient }: Props) {
             </div>
           </div>
         </div>
+
+        <button
+          onClick={() => signOut()}
+          style={{
+            width: '100%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            padding: '12px 0',
+            marginBottom: 10,
+            background: 'var(--rlight)',
+            border: '1px solid var(--red)',
+            borderRadius: 14,
+            color: 'var(--red)',
+            fontSize: 13,
+            fontWeight: 700,
+            cursor: 'pointer',
+          }}
+        >
+          <i className="ti ti-logout" style={{ fontSize: 16 }} />
+          Wyloguj się
+        </button>
       </div>
 
       <Navbar active="profile" navigate={navigate} />
