@@ -3,7 +3,7 @@ import Navbar from '../components/Navbar';
 import type { Screen, Meal, PlanDay } from '../types';
 import {
   getToday, addDays,
-  getOrderableDate, formatDateLongPL, formatDateShortPL, formatDateForAPI,
+  formatDateShortPL, formatDateForAPI,
   getOption,
 } from '../utils';
 import { fetchMenuForDate } from '../api';
@@ -21,6 +21,7 @@ const PAST_LABELS: Record<number, string> = {
   [-1]: 'Posiłki z wczoraj',
   [-2]: 'Posiłki sprzed 2 dni',
   [-3]: 'Posiłki sprzed 3 dni',
+  [-4]: 'Posiłki sprzed 4 dni',
 };
 
 const BADGE_ICON: Record<string, string> = {
@@ -48,6 +49,15 @@ const BADGE_LABEL: Record<string, string> = {
 type PastBadge = { badge: string; bc: 'g' | 'o' | '' };
 
 const PAST_DAY_BADGES: Record<number, PastBadge[]> = {
+  [-4]: [
+    { badge: 'zjedzone',     bc: 'g' },
+    { badge: 'zjedzone',     bc: 'g' },
+    { badge: 'zjedzone',     bc: 'g' },
+    { badge: 'częściowo',    bc: 'o' },
+    { badge: 'zjedzone',     bc: 'g' },
+    { badge: 'nie zjedzone', bc: ''  },
+    { badge: 'zjedzone',     bc: 'g' },
+  ],
   [-1]: [
     { badge: 'zjedzone',     bc: 'g' },
     { badge: 'zjedzone',     bc: 'g' },
@@ -77,14 +87,6 @@ const PAST_DAY_BADGES: Record<number, PastBadge[]> = {
   ],
 };
 
-const TREATMENT_SESSIONS = [
-  { date: '7 kwi', label: 'Chemo', type: 'chemo', done: true },
-  { date: '28 kwi', label: 'Chemo', type: 'chemo', done: true },
-  { date: '7 maj', label: 'Chemo', type: 'chemo', done: true },
-  { date: '21 maj', label: 'Chemo', type: 'chemo', done: false, next: true },
-  { date: '11 cze', label: 'Radio', type: 'radio', done: false },
-  { date: '25 cze', label: 'Radio', type: 'radio', done: false },
-];
 
 function apiMealsToPlanMeals(
   meals: Meal[],
@@ -100,15 +102,13 @@ function apiMealsToPlanMeals(
 
 export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
   const today = useMemo(() => getToday(), []);
-  const orderDate = useMemo(() => getOrderableDate(), []);
 
   const [selectedOffset, setSelectedOffset] = useState(0);
   const [fetchedMeals, setFetchedMeals] = useState<Record<number, Meal[] | null>>({});
-  const [showTreatments, setShowTreatments] = useState(false);
   const [expandedMacros, setExpandedMacros] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    [-3, -2, -1, 0, 1].forEach((offset) => {
+    [-4, -3, -2, -1, 0, 1].forEach((offset) => {
       fetchMenuForDate(formatDateForAPI(addDays(today, offset))).then((meals) =>
         setFetchedMeals((prev) => ({ ...prev, [offset]: meals })),
       );
@@ -129,7 +129,7 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
 
   const dayEntries = useMemo(() =>
     Array.from({ length: 7 }, (_, i) => {
-      const offset = i - 3;
+      const offset = i - 4;
       const d = addDays(today, offset);
       const dow = d.getDay();
       return {
@@ -137,7 +137,7 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
         date: d,
         short: PL_SHORT[dow],
         num: String(d.getDate()),
-        isChemo: d.getDay() === 4 && offset < 0,
+        isChemo: d.getDay() === 4,
       };
     }),
   [today]);
@@ -147,7 +147,7 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
 
   // Compute the plan data for the selected day
   const day: PlanDay = useMemo(() => {
-    if (selectedOffset >= -3 && selectedOffset <= -1) {
+    if (selectedOffset >= -4 && selectedOffset <= -1) {
       const meals = fetchedMeals[selectedOffset];
       return {
         label: PAST_LABELS[selectedOffset],
@@ -230,8 +230,7 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
 
   const isHistory = selectedOffset < 0;
   const totalKcal = day.meals.reduce((s, m) => s + m.kcal, 0);
-  const nextSession = TREATMENT_SESSIONS.find((s) => s.next);
-  const selectedEntry = dayEntries.find((d) => d.offset === selectedOffset)!;
+  const isSelectedChemo = dayEntries.find((d) => d.offset === selectedOffset)?.isChemo ?? false;
 
   return (
     <div className="screen active">
@@ -260,96 +259,16 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
         ))}
       </div>
 
-      {/* ── Order banner ──────────────────────────────────── */}
-      <div
-        style={{
-          margin: '0 16px 10px',
-          background: 'var(--olight)', border: '1.5px solid var(--omid)',
-          borderRadius: 11, padding: '8px 12px',
-          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          cursor: 'pointer',
-        }}
-        onClick={() => navigate('order')}
-      >
-        <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
-          <i className="ti ti-shopping-cart" style={{ fontSize: 13, color: 'var(--orange)', flexShrink: 0 }} />
-          <p style={{ fontSize: 11, color: 'var(--text)', margin: 0 }}>
-            {hasOrdered
-              ? <>Zmień zamówienie na: <strong style={{ color: 'var(--orange)' }}>{formatDateShortPL(orderDate)}</strong></>
-              : <>Zamów na: <strong style={{ color: 'var(--orange)' }}>{formatDateShortPL(orderDate)}</strong></>
-            }
-          </p>
-        </div>
-        <i className="ti ti-chevron-right" style={{ fontSize: 13, color: 'var(--orange)' }} />
-      </div>
-
-      {/* ── Treatment notice ──────────────────────────────── */}
-      {nextSession && (
-        <div
-          style={{
-            margin: '0 16px 10px',
-            background: 'var(--olight)', border: '1px solid var(--omid)',
-            borderRadius: 11, padding: '8px 12px',
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            cursor: 'pointer',
-          }}
-          onClick={() => setShowTreatments(!showTreatments)}
-        >
-          <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
-            <i className="ti ti-calendar-event" style={{ fontSize: 13, color: 'var(--orange)', flexShrink: 0 }} />
-            <p style={{ fontSize: 11, color: 'var(--text)', margin: 0 }}>
-              Następna sesja: <strong style={{ color: 'var(--orange)' }}>{nextSession.label} · {nextSession.date}</strong>
-            </p>
-          </div>
-          <i className={`ti ${showTreatments ? 'ti-chevron-up' : 'ti-chevron-down'}`}
-            style={{ fontSize: 13, color: 'var(--text3)' }} />
-        </div>
-      )}
-
-      {/* ── Treatment timeline ────────────────────────────── */}
-      {showTreatments && (
-        <div style={{ margin: '0 16px 10px' }}>
-          <div style={{
-            background: 'var(--card)', border: '1px solid var(--border)',
-            borderRadius: 12, padding: '10px 12px',
-          }}>
-            <p style={{ fontSize: 11, fontWeight: 600, color: 'var(--text2)', marginBottom: 10 }}>
-              Plan leczenia — wszystkie sesje
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-              {TREATMENT_SESSIONS.map((s, i) => (
-                <div key={i} style={{
-                  display: 'flex', alignItems: 'center', gap: 9,
-                  padding: '6px 9px', borderRadius: 9,
-                  background: s.next ? 'var(--olight)' : s.done ? 'var(--glight)' : 'var(--bg)',
-                  border: s.next ? '1.5px solid var(--omid)' : s.done ? '1px solid var(--gmid)' : '1px solid var(--border)',
-                }}>
-                  <div style={{
-                    width: 24, height: 24, borderRadius: '50%', flexShrink: 0,
-                    background: s.done ? 'var(--green)' : s.next ? 'var(--orange)' : 'var(--border)',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  }}>
-                    <i className={`ti ${s.done ? 'ti-check' : s.next ? 'ti-clock' : 'ti-calendar'}`}
-                      style={{ fontSize: 11, color: s.done || s.next ? '#fff' : 'var(--text3)' }} />
-                  </div>
-                  <div style={{ flex: 1 }}>
-                    <span style={{ fontSize: 12, fontWeight: 600, color: s.next ? 'var(--orange)' : 'var(--text)' }}>
-                      {s.type === 'chemo' ? 'Chemioterapia' : 'Radioterapia'}
-                      {s.next ? ' — następna' : s.done ? ' — zakończona' : ''}
-                    </span>
-                    <span style={{ fontSize: 11, color: 'var(--text2)', marginLeft: 6 }}>{s.date}</span>
-                  </div>
-                  <span style={{
-                    fontSize: 9, fontWeight: 700, padding: '2px 7px', borderRadius: 8,
-                    background: s.type === 'chemo' ? 'rgba(232,115,42,0.15)' : 'rgba(45,125,90,0.15)',
-                    color: s.type === 'chemo' ? 'var(--orange)' : 'var(--green)',
-                  }}>
-                    {s.label}
-                  </span>
-                </div>
-              ))}
-            </div>
-          </div>
+      {isSelectedChemo && (
+        <div style={{
+          margin: '0 16px 8px',
+          padding: '5px 10px',
+          background: 'rgba(129,140,248,0.08)',
+          borderRadius: 9,
+          display: 'flex', alignItems: 'center', gap: 6,
+        }}>
+          <span style={{ width: 5, height: 5, borderRadius: '50%', background: '#818cf8', flexShrink: 0 }} />
+          <span style={{ fontSize: 10, color: '#818cf8', fontWeight: 600 }}>Chemioterapia</span>
         </div>
       )}
 
@@ -363,20 +282,6 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
             {day.sub}
           </p>
         </div>
-
-        {/* ── Chemo day warning (past Thursday) ─────────── */}
-        {selectedEntry.isChemo && (
-          <div style={{
-            background: 'var(--rlight)', border: '1px solid var(--red)',
-            borderRadius: 12, padding: '8px 12px', marginBottom: 12,
-            display: 'flex', gap: 7, alignItems: 'center',
-          }}>
-            <i className="ti ti-alert-triangle" style={{ fontSize: 13, color: 'var(--red)', flexShrink: 0 }} />
-            <p style={{ fontSize: 11, color: 'var(--red)', fontWeight: 600, margin: 0 }}>
-              Dzień wlewu — dieta okołowlewowa. Posiłki dobrane specjalnie pod chemioterapię.
-            </p>
-          </div>
-        )}
 
         {/* ── History kcal summary ───────────────────────── */}
         {isHistory && totalKcal > 0 && (
@@ -463,20 +368,9 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
         {/* ── CTA for orderable day ─────────────────────── */}
         {selectedOffset === 2 && !hasOrdered && (
           <button className="orange-btn" style={{ marginTop: 8 }} onClick={() => navigate('order')}>
-            Wybierz posiłki na {formatDateShortPL(selectedDate)} →
+            Wybierz dania →
           </button>
         )}
-
-        <button
-          className="orange-btn"
-          style={{ marginTop: selectedOffset === 2 && !hasOrdered ? 6 : 8, opacity: 0.85 }}
-          onClick={() => navigate('order')}
-        >
-          {hasOrdered
-            ? `Zmień zamówienie na ${formatDateLongPL(orderDate)} →`
-            : `Zamów na ${formatDateLongPL(orderDate)} →`
-          }
-        </button>
       </div>
 
       <Navbar active="plan" navigate={navigate} />
