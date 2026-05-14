@@ -117,14 +117,61 @@ export async function fetchAiRecommendation(payload: any): Promise<{
   globalReason: string;
   choices: Record<string, { choice: number; reason: string }>;
 } | null> {
+  const apiKey = import.meta.env.VITE_GROQ_API_KEY;
+  if (!apiKey) return null;
+
+  const prompt = `Jesteś ekspertem dietetyki klinicznej wspierającym pacjentów onkologicznych.
+Zadanie: Wybierz najlepsze dania dla pacjenta na pojutrze, z dostępnych opcji dla poszczególnych posiłków.
+
+Dane pacjenta:
+${JSON.stringify(payload.patient, null, 2)}
+
+Dzisiejsze objawy:
+${JSON.stringify(payload.symptoms, null, 2)}
+
+Historia objawów:
+${JSON.stringify(payload.symptomHistory, null, 2)}
+
+Spożycie posiłków dzisiaj (full = zjedzone, none = niezjedzone):
+${JSON.stringify(payload.eatenMap, null, 2)}
+
+Dostępne posiłki do wyboru na pojutrze:
+${JSON.stringify(payload.activeMeals, null, 2)}
+
+Zasady i wytyczne:
+1. NIEZALEŻNOŚĆ OCENY: Zignoruj całkowicie pola isRec, score oraz scoreReason - to sztywne wartości systemowe. Zrób samodzielną ocenę na podstawie składników, makroskładników i objawów pacjenta.
+2. DOPASOWANIE DO OBJAWÓW (KLINICZNE):
+   - Nudności/wymioty: preferuj dania na zimno, łagodne, bez intensywnych zapachów, unikaj tłustych.
+   - Biegunka: preferuj dania zapierające (ryż, marchew), unikaj nadmiaru błonnika.
+   - Zaparcia: preferuj opcje z warzywami i owocami.
+   - Brak apetytu: preferuj posiłki gęste odżywczo, wysokobiałkowe.
+   - Zmiany w jamie ustnej: unikaj dań kwaśnych, gorących i twardych.
+3. PERSONALIZACJA: W uzasadnieniach zwracaj się empatycznie do pacjenta na "Ty" (używając imienia z profilu).
+4. ODWAŻNE DECYZJE: Wybieraj alternatywę (opcja 1), jeśli lepiej pasuje do objawów niż domyślna opcja 0.
+5. UZASADNIENIE OGÓLNE (globalReason): Podsumuj w 2-3 zdaniach strategię na dzień.
+6. Zwróć DOKŁADNIE w formacie JSON:
+{"globalReason": "uzasadnienie", "choices": {"breakfast": {"choice": 0, "reason": "uzasadnienie"}, "lunch2": {"choice": 1, "reason": "uzasadnienie"}}}
+Dopasuj klucze w choices do id posiłków z danych wejściowych.`;
+
   try {
-    const res = await fetch('http://localhost:8000/api/recommend', {
+    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: 'system', content: 'Jesteś asystentem zwracającym odpowiedzi tylko w formacie JSON.' },
+          { role: 'user', content: prompt },
+        ],
+        response_format: { type: 'json_object' },
+      }),
     });
     if (!res.ok) return null;
-    return await res.json();
+    const data = await res.json();
+    return JSON.parse(data.choices[0].message.content);
   } catch {
     return null;
   }
