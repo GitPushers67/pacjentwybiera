@@ -399,7 +399,7 @@ export default function OrderScreen({
     <div className="screen active">
       <div className="topbar">
         <div><h1>Zamówienie</h1></div>
-        <TopbarDate />
+        <TopbarDate navigate={navigate} />
       </div>
 
       {globalAiReason && (

@@ -125,7 +125,7 @@ export default function HomeScreen({
           alt="Pacjent Wybiera"
           style={{ height: 58, objectFit: "contain" }}
         />
-        <TopbarDate />
+        <TopbarDate navigate={navigate} />
       </div>
 
       <div style={{ padding: "0 16px 12px" }}>

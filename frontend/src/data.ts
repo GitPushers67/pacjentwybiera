@@ -401,3 +401,32 @@ export function getDailyTargets(weightKg: number) {
 }
 
 export const DAILY_TARGETS = getDailyTargets(65);
+
+export interface MockSymptom {
+  key: string;
+  hour: number;
+  minute: number;
+  scale: number;
+  note?: string;
+}
+
+export const pastMockSymptoms: Record<number, MockSymptom[]> = {
+  [-4]: [
+    { key: 'taste',   hour:  9, minute: 15, scale: 40, note: 'Jedzenie smakuje metalicznie, szczególnie mięso' },
+    { key: 'const',   hour: 11, minute:  0, scale: 35 },
+  ],
+  [-3]: [
+    { key: 'nausea',   hour:  8, minute: 45, scale: 30 },
+    { key: 'appetite', hour: 12, minute: 30, scale: 50, note: 'Brak chęci do jedzenia obiadu, zjadłem połowę' },
+    { key: 'fatigue',  hour: 17, minute:  0, scale: 55 },
+  ],
+  [-2]: [
+    { key: 'metal',   hour: 10, minute:  0, scale: 45, note: 'Metaliczny posmak po śniadaniu' },
+    { key: 'fatigue', hour: 14, minute: 30, scale: 55 },
+  ],
+  [-1]: [
+    { key: 'nausea',  hour:  9, minute: 30, scale: 70, note: 'Silne nudności po wlewie chemioterapii' },
+    { key: 'fatigue', hour: 15, minute:  0, scale: 60 },
+    { key: 'dryness', hour: 20, minute:  0, scale: 40 },
+  ],
+};

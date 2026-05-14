@@ -16,6 +16,7 @@ import ConfirmScreen from "./screens/ConfirmScreen";
 import WelcomeScreen from "./screens/WelcomeScreen";
 import AllergensScreen from "./screens/AllergensScreen";
 import NutritionScreen from "./screens/NutritionScreen";
+import ChatScreen from "./screens/ChatScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
 
 // DEV_MODE = true  → pomija onboarding + welcome, startuje na home z mock-pacjentem
@@ -96,6 +97,7 @@ export default function App() {
               navigate={navigate}
               choices={choices}
               orderMeals={orderMeals}
+              symptomHistory={symptomHistory}
             />
           )}
           {screen === "order" && patient && (
@@ -137,6 +139,7 @@ export default function App() {
               patient={patient}
             />
           )}
+          {screen === "chat" && <ChatScreen navigate={navigate} />}
           {screen === "confirm" && <ConfirmScreen navigate={navigate} />}
         </div>
       </div>

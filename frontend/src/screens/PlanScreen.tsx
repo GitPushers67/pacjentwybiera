@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import Navbar from '../components/Navbar';
-import type { Screen, Meal, PlanDay } from '../types';
+import type { Screen, Meal, PlanDay, PlanMeal, SymptomHistoryEntry } from '../types';
 import {
   getToday, addDays,
   formatDateShortPL, formatDateForAPI,
@@ -8,11 +8,13 @@ import {
 } from '../utils';
 import { fetchMenuForDate } from '../api';
 import TopbarDate from '../components/TopbarDate';
+import { pastMockSymptoms } from '../data';
 
 interface Props {
   navigate: (s: Screen) => void;
   choices: Record<string, number>;
   orderMeals: Meal[] | null;
+  symptomHistory: SymptomHistoryEntry[];
 }
 
 const PL_SHORT = ['Nd', 'Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob'];
@@ -87,6 +89,83 @@ const PAST_DAY_BADGES: Record<number, PastBadge[]> = {
   ],
 };
 
+const MEAL_HOURS: Record<string, number> = {
+  'OnkoShot':     7,
+  'Śniadanie':    8,
+  'II Śniadanie': 10,
+  'Koktajl':      12,
+  'Obiad':        13,
+  'Podwieczorek': 16,
+  'Kolacja':      19,
+};
+
+const MEAL_MINUTES: Record<string, number> = {
+  'OnkoShot':     0,
+  'Śniadanie':    0,
+  'II Śniadanie': 30,
+  'Koktajl':      0,
+  'Obiad':        0,
+  'Podwieczorek': 0,
+  'Kolacja':      0,
+};
+
+const SYM_LABELS: Record<string, string> = {
+  nausea:   'Nudności',
+  diarrhea: 'Biegunka',
+  const:    'Zaparcia',
+  mouth:    'Ból jamy ustnej',
+  taste:    'Brak smaku',
+  metal:    'Metaliczny posmak',
+  fatigue:  'Zmęczenie',
+  appetite: 'Brak apetytu',
+  dryness:  'Suchość w ustach',
+};
+
+const SYM_ICONS: Record<string, string> = {
+  nausea:   'ti-mood-sick',
+  diarrhea: 'ti-ripple',
+  const:    'ti-alert-circle',
+  mouth:    'ti-bandage',
+  taste:    'ti-eye-off',
+  metal:    'ti-thermometer',
+  fatigue:  'ti-zzz',
+  appetite: 'ti-bowl',
+  dryness:  'ti-droplets',
+};
+
+type TimelineEntry =
+  | { kind: 'meal'; hour: number; minute: number; meal: PlanMeal }
+  | { kind: 'symptom'; hour: number; minute: number; key: string; scale: number; note?: string };
+
+function buildTimeline(
+  meals: PlanMeal[],
+  offset: number,
+  symptomHistory: SymptomHistoryEntry[],
+  selectedDate: Date,
+): TimelineEntry[] {
+  const entries: TimelineEntry[] = meals.map(m => ({
+    kind: 'meal' as const,
+    hour: MEAL_HOURS[m.type] ?? 12,
+    minute: MEAL_MINUTES[m.type] ?? 0,
+    meal: m,
+  }));
+
+  if (offset >= -4 && offset <= -1) {
+    for (const s of (pastMockSymptoms[offset] ?? [])) {
+      entries.push({ kind: 'symptom', hour: s.hour, minute: s.minute, key: s.key, scale: s.scale, note: s.note });
+    }
+  } else if (offset === 0) {
+    const todayStr = selectedDate.toDateString();
+    for (const e of symptomHistory) {
+      const d = new Date(e.addedAt);
+      if (d.toDateString() === todayStr) {
+        entries.push({ kind: 'symptom', hour: d.getHours(), minute: d.getMinutes(), key: e.key, scale: e.scale, note: e.note });
+      }
+    }
+  }
+
+  return entries.sort((a, b) => a.hour * 60 + a.minute - (b.hour * 60 + b.minute));
+}
 
 function apiMealsToPlanMeals(
   meals: Meal[],
@@ -100,7 +179,7 @@ function apiMealsToPlanMeals(
   });
 }
 
-export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
+export default function PlanScreen({ navigate, choices, orderMeals, symptomHistory }: Props) {
   const today = useMemo(() => getToday(), []);
 
   const [selectedOffset, setSelectedOffset] = useState(0);
@@ -145,7 +224,6 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
   const selectedDate = addDays(today, selectedOffset);
   const hasOrdered = orderMeals !== null && Object.keys(choices).length > 0;
 
-  // Compute the plan data for the selected day
   const day: PlanDay = useMemo(() => {
     if (selectedOffset >= -4 && selectedOffset <= -1) {
       const meals = fetchedMeals[selectedOffset];
@@ -212,7 +290,6 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
       };
     }
 
-    // offset === 3
     return {
       label: `Posiłki na ${formatDateShortPL(selectedDate)}`,
       sub: 'Zamówienie dostępne wkrótce',
@@ -228,7 +305,13 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
     };
   }, [selectedOffset, selectedDate, fetchedMeals, hasOrdered, orderMeals, choices]);
 
+  const timeline = useMemo(() => {
+    if (selectedOffset > 0) return [];
+    return buildTimeline(day.meals, selectedOffset, symptomHistory, selectedDate);
+  }, [day.meals, selectedOffset, symptomHistory, selectedDate]);
+
   const isHistory = selectedOffset < 0;
+  const showTimeline = selectedOffset <= 0;
   const totalKcal = day.meals.reduce((s, m) => s + m.kcal, 0);
   const isSelectedChemo = dayEntries.find((d) => d.offset === selectedOffset)?.isChemo ?? false;
 
@@ -236,7 +319,7 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
     <div className="screen active">
       <div className="topbar">
         <div><h1>Plan posiłków</h1></div>
-        <TopbarDate />
+        <TopbarDate navigate={navigate} />
       </div>
 
       {/* ── 7-day bar ─────────────────────────────────────── */}
@@ -300,7 +383,7 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
           </div>
         )}
 
-        {/* ── Meal list ──────────────────────────────────── */}
+        {/* ── Loading state ──────────────────────────────── */}
         {day.meals.length === 0 && (
           <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text3)', fontSize: 12 }}>
             <i className="ti ti-loader-2 cam-spin" style={{ fontSize: 22, display: 'block', margin: '0 auto 8px' }} />
@@ -308,7 +391,105 @@ export default function PlanScreen({ navigate, choices, orderMeals }: Props) {
           </div>
         )}
 
-        {day.meals.map((m) => (
+        {/* ── Timeline (dziś + historia) ────────────────── */}
+        {showTimeline && timeline.length > 0 && (
+          <div className="tl-wrap">
+            {timeline.map((entry, i) => {
+              const timeStr = `${String(entry.hour).padStart(2, '0')}:${String(entry.minute).padStart(2, '0')}`;
+
+              if (entry.kind === 'meal') {
+                const m = entry.meal;
+                return (
+                  <div key={`meal-${m.type}`} className="tl-item">
+                    <span className="tl-time">{timeStr}</span>
+                    <div className="tl-dot tl-dot-meal" />
+                    <div className="cal-meal-item" style={{ marginBottom: 0 }}>
+                      <div className="cmi-top-row">
+                        <div className="cmi-info">
+                          <div className="cmi-type">{m.type}</div>
+                          <div className="cmi-name">{m.name}</div>
+                        </div>
+                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                            {BADGE_ICON[m.badge] && (
+                              <i className={`ti ${BADGE_ICON[m.badge]}`} style={{
+                                fontSize: 11,
+                                color: m.bc === 'g' ? 'var(--green)' : m.bc === 'o' ? 'var(--orange)' : 'var(--text3)',
+                              }} />
+                            )}
+                            <span className={`cmi-badge ${m.bc}`}>{BADGE_LABEL[m.badge] ?? m.badge}</span>
+                          </div>
+                          {m.kcal > 0 && (
+                            <button
+                              onClick={() => toggleMacro(m.type)}
+                              style={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                width: 33, height: 33, borderRadius: 9, cursor: 'pointer',
+                                border: expandedMacros.has(m.type) ? '1.5px solid var(--omid)' : '1.5px solid var(--border)',
+                                background: expandedMacros.has(m.type) ? 'var(--olight)' : 'var(--bg)',
+                                transition: 'all 0.15s',
+                              }}
+                            >
+                              <i
+                                className="ti ti-chart-bar"
+                                style={{
+                                  fontSize: 19,
+                                  color: expandedMacros.has(m.type) ? 'var(--orange)' : 'var(--text3)',
+                                }}
+                              />
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {m.kcal > 0 && expandedMacros.has(m.type) && (
+                        <div className="cmi-macros">
+                          {[
+                            { val: m.kcal,    lbl: 'kcal',   cls: 'mc-kcal' },
+                            { val: m.protein, lbl: 'białko',  cls: 'mc-prot' },
+                            { val: m.carbs,   lbl: 'węgle',   cls: 'mc-carb' },
+                            { val: m.fat,     lbl: 'tłuszcz', cls: 'mc-fat'  },
+                          ].map(({ val, lbl, cls }) => val != null && (
+                            <div key={lbl} className="cmi-macro">
+                              <div className={`cmi-mc ${cls}`}>{val}</div>
+                              <span className="cmi-ml">{lbl}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              }
+
+              // symptom entry
+              const { key, scale, note } = entry;
+              const dotCls = scale >= 67 ? 'tl-dot-sym-high' : scale >= 34 ? 'tl-dot-sym-mid' : 'tl-dot-sym-low';
+              const badgeCls = scale >= 67 ? 'high' : scale >= 34 ? 'mid' : 'low';
+              const badgeLbl = scale >= 67 ? 'Bardzo silny' : scale >= 34 ? 'Silny' : 'Słaby';
+              const symLabel = SYM_LABELS[key] ?? (key.startsWith('custom_') ? key.slice(7) : key);
+              const symIcon = SYM_ICONS[key] ?? 'ti-activity';
+              const symColor = scale >= 67 ? 'var(--red)' : scale >= 34 ? 'var(--amber)' : 'var(--green)';
+
+              return (
+                <div key={`sym-${i}-${key}`} className="tl-item">
+                  <span className="tl-time">{timeStr}</span>
+                  <div className={`tl-dot ${dotCls}`} />
+                  <div className="tl-sym-card">
+                    <div className="tl-sym-row">
+                      <i className={`ti ${symIcon}`} style={{ fontSize: 13, color: symColor, flexShrink: 0 }} />
+                      <span className="tl-sym-name">{symLabel}</span>
+                      <span className={`tl-sym-badge ${badgeCls}`}>{badgeLbl}</span>
+                    </div>
+                    {note && <div className="tl-sym-note">{note}</div>}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* ── Flat list (przyszłe dni) ───────────────────── */}
+        {!showTimeline && day.meals.map((m) => (
           <div key={m.type} className="cal-meal-item">
             <div className="cmi-top-row">
               <div className="cmi-info">

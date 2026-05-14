@@ -109,7 +109,25 @@ export default function AddSymScreen({
           <p>Kliknij objaw, aby zapisać do historii</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
-          <TopbarDate />
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <TopbarDate />
+            <button
+              onClick={() => navigate('profile')}
+              style={{
+                background: 'var(--border)',
+                border: 'none',
+                borderRadius: '50%',
+                width: 36,
+                height: 36,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+              }}
+            >
+              <i className="ti ti-user" style={{ fontSize: 18, color: 'var(--text2)' }} />
+            </button>
+          </div>
           <button
             style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
             onClick={() => navigate("home")}

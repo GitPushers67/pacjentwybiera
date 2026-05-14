@@ -24,13 +24,9 @@ export default function Navbar({ active, navigate }: Props) {
         <i className="ti ti-mood-sick" />
         <span>Objawy</span>
       </button>
-      <button className={`nb ${active === 'nutrition' ? 'on' : ''}`} onClick={() => navigate('nutrition')}>
-        <i className="ti ti-chart-bar" />
-        <span>Makra</span>
-      </button>
-      <button className={`nb ${active === 'profile' ? 'on' : ''}`} onClick={() => navigate('profile')}>
-        <i className="ti ti-user" />
-        <span>Profil</span>
+      <button className={`nb ${active === 'chat' ? 'on' : ''}`} onClick={() => navigate('chat')}>
+        <i className="ti ti-message-circle" />
+        <span>Chat</span>
       </button>
     </div>
   );
