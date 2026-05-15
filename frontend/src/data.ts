@@ -395,23 +395,36 @@ interface DailyTargetsInput {
   weightKg: number;
   heightCm: number;
   birthYear: number;
-  sex: 'female' | 'male';
+  sex: 'female' | 'male' | '';
 }
 
+const MALE_SWE_OFFSET = 5;
+const FEMALE_SWE_OFFSET = -161;
+
 function getAgeFromBirthYear(birthYear: number): number {
+  if (!Number.isFinite(birthYear)) return 0;
   const currentYear = new Date().getFullYear();
   const age = currentYear - birthYear;
-  if (!Number.isFinite(age)) return 0;
   return Math.max(0, Math.min(120, age));
 }
 
 export function getDailyTargets({ weightKg, heightCm, birthYear, sex }: DailyTargetsInput) {
+  if (sex === '') {
+    return {
+      kcal: Math.round(weightKg * 27.5),
+      protein: Math.round(weightKg * 1.2),
+      carbs: 220,
+      fat: 60,
+    };
+  }
+
   const age = getAgeFromBirthYear(birthYear);
   const base = (10 * weightKg) + (6.25 * heightCm) - (5 * age);
-  const ppm = base + (sex === 'male' ? 5 : -161);
+  const sexOffset = sex === 'male' ? MALE_SWE_OFFSET : FEMALE_SWE_OFFSET;
+  const swe = base + sexOffset;
 
   return {
-    kcal: Math.round(ppm),
+    kcal: Math.round(swe),
     protein: Math.round(weightKg * 1.2),
     carbs: 220,
     fat: 60,

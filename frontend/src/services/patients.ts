@@ -5,6 +5,7 @@ interface DbPatient {
   user_id: string;
   first_name: string;
   last_name: string;
+  sex?: string | null;
   birth_year: number | null;
   weight_kg: number | null;
   height_cm: number | null;
@@ -17,7 +18,7 @@ function toProfile(row: DbPatient): PatientProfile {
   return {
     firstName: row.first_name,
     lastName: row.last_name,
-    sex: 'female',
+    sex: row.sex === 'female' || row.sex === 'male' ? row.sex : '',
     birthYear: row.birth_year ?? 1970,
     weightKg: row.weight_kg ?? 65,
     heightCm: row.height_cm ?? 170,
