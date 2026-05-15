@@ -366,9 +366,10 @@ export const pastMockDays: PlanDay[] = [
 
 export const symptomTips: Record<string, string> = {
   nausea: 'Nudności — wywietrz pomieszczenie przed posiłkiem. Sięgnij po schłodzone musy.',
-  taste: 'Zmiana smaku — doprawiaj cytryną lub octem balsamicznym.',
+  taste: 'Brak smaku — wzmacniaj aromat potraw ziołami i cytryną.',
+  taste_change: 'Zmiana smaku — doprawiaj cytryną lub octem balsamicznym. Unikaj metalicznych sztućców.',
   diarrhea: 'Biegunka — dieta BRAT: kleik ryżowy, banan, pieczone jabłko, tost.',
-  mouth: 'Ból jamy ustnej — produkty chłodne i miękkie. Unikaj imbiru i cynamonu.',
+  mouth: 'Pieczenie w jamie ustnej — produkty chłodne i miękkie. Unikaj imbiru i cynamonu.',
   const: 'Zaparcia — kefir, jogurt, owsianka. Minimum 2,5 l płynów.',
   fatigue: 'Zmęczenie — jedz regularnie co 2–3h, nie pomijaj posiłków.',
   appetite: 'Brak apetytu — małe porcje, bogato odżywcze. Koktajle białkowe.',
@@ -377,18 +378,20 @@ export const symptomTips: Record<string, string> = {
 };
 
 export const allergensList: Allergen[] = [
-  { key: 'gluten', label: 'Gluten', icon: 'ti-wheat' },
-  { key: 'dairy', label: 'Nabiał', icon: 'ti-droplet' },
-  { key: 'eggs', label: 'Jaja', icon: 'ti-egg' },
-  { key: 'nuts', label: 'Orzechy', icon: 'ti-nut' },
-  { key: 'fish', label: 'Ryby', icon: 'ti-fish' },
-  { key: 'shellfish', label: 'Skorupiaki', icon: 'ti-ripple' },
-  { key: 'soy', label: 'Soja', icon: 'ti-plant' },
-  { key: 'celery', label: 'Seler', icon: 'ti-leaf' },
-  { key: 'mustard', label: 'Musztarda', icon: 'ti-bottle' },
-  { key: 'sesame', label: 'Sezam', icon: 'ti-circle-dot' },
-  { key: 'citrus', label: 'Cytrusy', icon: 'ti-lemon' },
-  { key: 'grapefruit', label: 'Grejpfrut', icon: 'ti-forbid' },
+  { key: 'gluten',    label: 'Zboża zawierające gluten',          icon: 'ti-wheat' },
+  { key: 'shellfish', label: 'Skorupiaki',                         icon: 'ti-ripple' },
+  { key: 'eggs',      label: 'Jaja',                               icon: 'ti-egg' },
+  { key: 'fish',      label: 'Ryby',                               icon: 'ti-fish' },
+  { key: 'peanuts',   label: 'Orzeszki ziemne',                    icon: 'ti-nut' },
+  { key: 'soy',       label: 'Soja',                               icon: 'ti-plant' },
+  { key: 'dairy',     label: 'Mleko',                              icon: 'ti-droplet' },
+  { key: 'nuts',      label: 'Orzechy',                            icon: 'ti-trees' },
+  { key: 'celery',    label: 'Seler',                              icon: 'ti-leaf' },
+  { key: 'mustard',   label: 'Gorczyca',                           icon: 'ti-bottle' },
+  { key: 'sesame',    label: 'Sezam',                              icon: 'ti-circle-dot' },
+  { key: 'sulphites', label: 'Dwutlenek siarki i siarczyny',       icon: 'ti-flask' },
+  { key: 'lupin',     label: 'Łubin',                              icon: 'ti-flower' },
+  { key: 'molluscs',  label: 'Mięczaki',                           icon: 'ti-wave-sine' },
 ];
 
 interface DailyTargetsInput {

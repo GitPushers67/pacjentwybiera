@@ -20,15 +20,16 @@ function scaleLbl(v: number) {
 }
 
 const ALL_SYMPTOMS = [
-  { key: "nausea", icon: "ti-mood-sick", label: "Nudności" },
-  { key: "diarrhea", icon: "ti-ripple", label: "Biegunka" },
-  { key: "const", icon: "ti-alert-circle", label: "Zaparcia" },
-  { key: "mouth", icon: "ti-bandage", label: "Ból jamy ustnej" },
-  { key: "taste", icon: "ti-eye-off", label: "Brak smaku" },
-  { key: "metal", icon: "ti-thermometer", label: "Metaliczny posmak" },
-  { key: "fatigue", icon: "ti-zzz", label: "Zmęczenie" },
-  { key: "appetite", icon: "ti-bowl", label: "Brak apetytu" },
-  { key: "dryness", icon: "ti-droplets", label: "Suchość w ustach" },
+  { key: "nausea",       icon: "ti-mood-sick",   label: "Nudności" },
+  { key: "diarrhea",     icon: "ti-ripple",       label: "Biegunka" },
+  { key: "const",        icon: "ti-alert-circle", label: "Zaparcia" },
+  { key: "mouth",        icon: "ti-bandage",      label: "Pieczenie w jamie ustnej" },
+  { key: "taste",        icon: "ti-eye-off",      label: "Brak smaku" },
+  { key: "taste_change", icon: "ti-tongue",       label: "Zmiana smaku" },
+  { key: "metal",        icon: "ti-thermometer",  label: "Metaliczny posmak" },
+  { key: "fatigue",      icon: "ti-zzz",          label: "Zmęczenie" },
+  { key: "appetite",     icon: "ti-bowl",         label: "Brak apetytu" },
+  { key: "dryness",      icon: "ti-droplets",     label: "Suchość w ustach" },
 ];
 
 export default function AddSymScreen({
@@ -403,7 +404,7 @@ export default function AddSymScreen({
                 type="text"
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
-                placeholder="Np. Ból pleców, Duszność, Obrzęk..."
+                placeholder=""
                 autoFocus
                 style={{
                   width: "100%",
