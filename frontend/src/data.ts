@@ -391,16 +391,50 @@ export const allergensList: Allergen[] = [
   { key: 'grapefruit', label: 'Grejpfrut', icon: 'ti-forbid' },
 ];
 
-export function getDailyTargets(weightKg: number) {
+interface DailyTargetsInput {
+  weightKg: number;
+  heightCm: number;
+  birthYear: number;
+  sex: 'female' | 'male' | '';
+}
+
+const MALE_SWE_OFFSET = 5;
+const FEMALE_SWE_OFFSET = -161;
+
+function getAgeFromBirthYear(birthYear: number): number {
+  if (!Number.isFinite(birthYear)) return 0;
+  const currentYear = new Date().getFullYear();
+  return Math.max(0, Math.min(120, currentYear - birthYear));
+}
+
+export function getDailyTargets({ weightKg, heightCm, birthYear, sex }: DailyTargetsInput) {
+  if (sex === '') {
+    return {
+      kcal: Math.round(weightKg * 27.5),
+      protein: Math.round(weightKg * 1.2),
+      carbs: 220,
+      fat: 60,
+    };
+  }
+
+  const age = getAgeFromBirthYear(birthYear);
+  const base = (10 * weightKg) + (6.25 * heightCm) - (5 * age);
+  const swe = base + (sex === 'male' ? MALE_SWE_OFFSET : FEMALE_SWE_OFFSET);
+
   return {
-    kcal: Math.round(weightKg * 27.5),
-    protein: Math.round(weightKg * 1.4),
+    kcal: Math.round(swe),
+    protein: Math.round(weightKg * 1.2),
     carbs: 220,
     fat: 60,
   };
 }
 
-export const DAILY_TARGETS = getDailyTargets(65);
+export const DAILY_TARGETS = getDailyTargets({
+  weightKg: 65,
+  heightCm: 170,
+  birthYear: 1970,
+  sex: 'female',
+});
 
 export interface MockSymptom {
   key: string;

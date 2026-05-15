@@ -1,4 +1,4 @@
-import type { Meal, PatientProfile } from './types';
+import type { EatenStatus, Meal, MealOption, PatientProfile, SymptomHistoryEntry } from './types';
 
 const API_BASE = 'https://pacjentwybiera.pl/wp-json/mobilnycatering/v1/menu-schedules';
 const PATIENTS_STORAGE_KEY = 'pacjentwybiera:patients';
@@ -126,7 +126,18 @@ export async function listPatients(): Promise<PatientProfile[]> {
   ));
 }
 
-export async function fetchAiRecommendation(payload: any): Promise<{
+type AiMealOption = Omit<MealOption, 'isRec' | 'score' | 'scoreReason' | 'why'>;
+type AiMeal = Omit<Meal, 'options'> & { options: AiMealOption[] };
+
+interface AiRecommendationPayload {
+  patient: PatientProfile;
+  symptoms: string[];
+  symptomHistory: SymptomHistoryEntry[];
+  eatenMap: Record<string, EatenStatus>;
+  activeMeals: AiMeal[];
+}
+
+export async function fetchAiRecommendation(payload: AiRecommendationPayload): Promise<{
   globalReason: string;
   choices: Record<string, { choice: number; reason: string }>;
 } | null> {

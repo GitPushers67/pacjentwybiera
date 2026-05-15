@@ -167,14 +167,19 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
     });
   }, [today]);
 
-  useEffect(() => {
+  function selectOffset(offset: number) {
+    setSelectedOffset(offset);
     setExpandedMacros(new Set());
-  }, [selectedOffset]);
+  }
 
   function toggleMacro(type: string) {
     setExpandedMacros((prev) => {
       const next = new Set(prev);
-      next.has(type) ? next.delete(type) : next.add(type);
+      if (next.has(type)) {
+        next.delete(type);
+      } else {
+        next.add(type);
+      }
       return next;
     });
   }
@@ -323,7 +328,7 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
           <button
             key={offset}
             className={`dp ${selectedOffset === offset ? 'on' : ''} ${offset === 0 ? 'today-day' : ''} ${offset < 0 ? 'past-day' : ''}`}
-            onClick={() => setSelectedOffset(offset)}
+            onClick={() => selectOffset(offset)}
           >
             <span>{short}</span>
             <span className="dn">{num}</span>

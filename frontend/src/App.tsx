@@ -29,6 +29,7 @@ const DEV_MODE = false;
 const DEV_PATIENT: PatientProfile = {
   firstName: "Kacper",
   lastName: "Testowy",
+  sex: "male",
   birthYear: 1980,
   weightKg: 72,
   heightCm: 178,
