@@ -32,6 +32,7 @@ export default function OnboardingScreen({ navigate, onComplete }: Props) {
   const [step, setStep] = useState(1);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
+  const [sex, setSex] = useState<PatientProfile['sex']>('female');
   const [birthYear, setBirthYear] = useState('');
   const [weightKg, setWeightKg] = useState('');
   const [heightCm, setHeightCm] = useState('');
@@ -50,6 +51,7 @@ export default function OnboardingScreen({ navigate, onComplete }: Props) {
     const profile: PatientProfile = {
       firstName: firstName.trim(),
       lastName: lastName.trim(),
+      sex,
       birthYear: Number(birthYear) || 1970,
       weightKg: Number(weightKg) || 65,
       heightCm: Number(heightCm) || 170,
@@ -127,8 +129,8 @@ export default function OnboardingScreen({ navigate, onComplete }: Props) {
                 Dane medyczne
               </div>
               <p style={{ fontSize: 13, color: 'var(--text2)', lineHeight: 1.5, margin: 0 }}>
-                Waga jest potrzebna do obliczenia Twojego dziennego zapotrzebowania na białko
-                (zalecane 1,4 g/kg przy leczeniu onkologicznym).
+                Waga, wzrost, wiek i płeć są potrzebne do obliczenia PPM/SWE oraz celu białka
+                (1,2 g/kg masy ciała).
               </p>
             </div>
 
@@ -152,6 +154,16 @@ export default function OnboardingScreen({ navigate, onComplete }: Props) {
               value={heightCm}
               onChange={(e) => setHeightCm(e.target.value)}
             />
+
+            <label className="onboard-label">Płeć</label>
+            <select
+              className="onboard-select"
+              value={sex}
+              onChange={(e) => setSex(e.target.value as PatientProfile['sex'])}
+            >
+              <option value="female">Kobieta</option>
+              <option value="male">Mężczyzna</option>
+            </select>
 
             <label className="onboard-label">Rodzaj nowotworu</label>
             <select

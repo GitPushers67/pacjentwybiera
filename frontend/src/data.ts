@@ -391,16 +391,39 @@ export const allergensList: Allergen[] = [
   { key: 'grapefruit', label: 'Grejpfrut', icon: 'ti-forbid' },
 ];
 
-export function getDailyTargets(weightKg: number) {
+interface DailyTargetsInput {
+  weightKg: number;
+  heightCm: number;
+  birthYear: number;
+  sex: 'female' | 'male';
+}
+
+function getAgeFromBirthYear(birthYear: number): number {
+  const currentYear = new Date().getFullYear();
+  const age = currentYear - birthYear;
+  if (!Number.isFinite(age)) return 0;
+  return Math.max(0, Math.min(120, age));
+}
+
+export function getDailyTargets({ weightKg, heightCm, birthYear, sex }: DailyTargetsInput) {
+  const age = getAgeFromBirthYear(birthYear);
+  const base = (10 * weightKg) + (6.25 * heightCm) - (5 * age);
+  const ppm = base + (sex === 'male' ? 5 : -161);
+
   return {
-    kcal: Math.round(weightKg * 27.5),
-    protein: Math.round(weightKg * 1.4),
+    kcal: Math.round(ppm),
+    protein: Math.round(weightKg * 1.2),
     carbs: 220,
     fat: 60,
   };
 }
 
-export const DAILY_TARGETS = getDailyTargets(65);
+export const DAILY_TARGETS = getDailyTargets({
+  weightKg: 65,
+  heightCm: 170,
+  birthYear: 1970,
+  sex: 'female',
+});
 
 export interface MockSymptom {
   key: string;

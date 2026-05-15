@@ -17,6 +17,7 @@ function toProfile(row: DbPatient): PatientProfile {
   return {
     firstName: row.first_name,
     lastName: row.last_name,
+    sex: 'female',
     birthYear: row.birth_year ?? 1970,
     weightKg: row.weight_kg ?? 65,
     heightCm: row.height_cm ?? 170,

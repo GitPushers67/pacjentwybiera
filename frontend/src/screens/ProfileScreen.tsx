@@ -29,7 +29,12 @@ const TREATMENT_SESSIONS = [
 export default function ProfileScreen({ navigate, patient }: Props) {
   const [showTreatment, setShowTreatment] = useState(false);
 
-  const targets = getDailyTargets(patient.weightKg);
+  const targets = getDailyTargets({
+    weightKg: patient.weightKg,
+    heightCm: patient.heightCm,
+    birthYear: patient.birthYear,
+    sex: patient.sex,
+  });
 
   const allergenLabels = patient.allergens
     .map((key) => allergensList.find((a) => a.key === key)?.label)

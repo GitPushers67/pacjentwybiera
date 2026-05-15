@@ -56,6 +56,7 @@ export interface Allergen {
 export interface PatientProfile {
   firstName: string;
   lastName: string;
+  sex: 'female' | 'male';
   birthYear: number;
   weightKg: number;
   heightCm: number;

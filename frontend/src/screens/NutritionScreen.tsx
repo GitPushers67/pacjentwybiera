@@ -93,7 +93,12 @@ function MacroCompareBar({ label, eaten, ordered, target, unit }: {
 type Tab = 'today' | 'week';
 
 export default function NutritionScreen({ navigate, choices, eatenMap, patient }: Props) {
-  const DAILY_TARGETS = getDailyTargets(patient.weightKg);
+  const DAILY_TARGETS = getDailyTargets({
+    weightKg: patient.weightKg,
+    heightCm: patient.heightCm,
+    birthYear: patient.birthYear,
+    sex: patient.sex,
+  });
   const [tab, setTab] = useState<Tab>('today');
 
   const eatenMacros = meals.reduce(
