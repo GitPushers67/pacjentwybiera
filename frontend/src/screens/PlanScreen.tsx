@@ -15,6 +15,7 @@ interface Props {
   choices: Record<string, number>;
   orderMeals: Meal[] | null;
   symptomHistory: SymptomHistoryEntry[];
+  streak?: number;
 }
 
 const PL_SHORT = ['Nd', 'Pon', 'Wt', 'Śr', 'Czw', 'Pt', 'Sob'];
@@ -141,7 +142,7 @@ function apiMealsToPlanMeals(
   });
 }
 
-export default function PlanScreen({ navigate, choices, orderMeals, symptomHistory }: Props) {
+export default function PlanScreen({ navigate, choices, orderMeals, symptomHistory, streak }: Props) {
   const today = useMemo(() => getToday(), []);
 
   const [selectedOffset, setSelectedOffset] = useState(0);
@@ -366,23 +367,6 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
           </p>
         </div>
 
-        {/* ── History kcal summary ───────────────────────── */}
-        {isHistory && totalKcal > 0 && (
-          <div style={{
-            background: 'var(--glight)', border: '1px solid var(--gmid)',
-            borderRadius: 12, padding: '8px 12px', marginBottom: 12,
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-          }}>
-            <div style={{ display: 'flex', gap: 7, alignItems: 'center' }}>
-              <i className="ti ti-chart-pie" style={{ fontSize: 13, color: 'var(--green)', flexShrink: 0 }} />
-              <p style={{ fontSize: 11, color: 'var(--green)', margin: 0 }}>Spożyto łącznie tego dnia</p>
-            </div>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--green)' }}>
-              {Math.round(totalKcal * 0.85)} kcal
-            </span>
-          </div>
-        )}
-
         {/* ── Loading state ──────────────────────────────── */}
         {day.meals.length === 0 && (
           <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text3)', fontSize: 12 }}>
@@ -393,69 +377,81 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
 
         {/* ── Timeline (dziś + historia) ────────────────── */}
         {showTimeline && timeline.length > 0 && (
-          <div className="tl-wrap">
+          <div>
             {timeline.map((entry, i) => {
               const timeStr = `${String(entry.hour).padStart(2, '0')}:${String(entry.minute).padStart(2, '0')}`;
+              const isLast = i === timeline.length - 1;
+              const isPast = selectedOffset < 0 || (selectedOffset === 0 && entry.hour < new Date().getHours());
 
               if (entry.kind === 'meal') {
                 const m = entry.meal;
                 return (
-                  <div key={`meal-${m.type}`} className="tl-item">
-                    <span className="tl-time">{timeStr}</span>
-                    <div className="tl-dot tl-dot-meal" />
-                    <div className="cal-meal-item" style={{ marginBottom: 0 }}>
-                      <div className="cmi-top-row">
-                        <div className="cmi-info">
-                          <div className="cmi-type">{m.type}</div>
-                          <div className="cmi-name">{m.name}</div>
-                        </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                            {BADGE_ICON[m.badge] && (
-                              <i className={`ti ${BADGE_ICON[m.badge]}`} style={{
-                                fontSize: 11,
-                                color: m.bc === 'g' ? 'var(--green)' : m.bc === 'o' ? 'var(--orange)' : 'var(--text3)',
-                              }} />
-                            )}
-                            <span className={`cmi-badge ${m.bc}`}>{BADGE_LABEL[m.badge] ?? m.badge}</span>
-                          </div>
-                          {m.kcal > 0 && (
-                            <button
-                              onClick={() => toggleMacro(m.type)}
-                              style={{
-                                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                width: 33, height: 33, borderRadius: 9, cursor: 'pointer',
-                                border: expandedMacros.has(m.type) ? '1.5px solid var(--omid)' : '1.5px solid var(--border)',
-                                background: expandedMacros.has(m.type) ? 'var(--olight)' : 'var(--bg)',
-                                transition: 'all 0.15s',
-                              }}
-                            >
-                              <i
-                                className="ti ti-chart-bar"
-                                style={{
-                                  fontSize: 19,
-                                  color: expandedMacros.has(m.type) ? 'var(--orange)' : 'var(--text3)',
-                                }}
-                              />
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                      {m.kcal > 0 && expandedMacros.has(m.type) && (
-                        <div className="cmi-macros">
-                          {[
-                            { val: m.kcal,    lbl: 'kcal',   cls: 'mc-kcal' },
-                            { val: m.protein, lbl: 'białko',  cls: 'mc-prot' },
-                            { val: m.carbs,   lbl: 'węgle',   cls: 'mc-carb' },
-                            { val: m.fat,     lbl: 'tłuszcz', cls: 'mc-fat'  },
-                          ].map(({ val, lbl, cls }) => val != null && (
-                            <div key={lbl} className="cmi-macro">
-                              <div className={`cmi-mc ${cls}`}>{val}</div>
-                              <span className="cmi-ml">{lbl}</span>
-                            </div>
-                          ))}
-                        </div>
+                  <div key={`meal-${m.type}`} style={{ display: 'flex', gap: 0 }}>
+                    {/* Oś czasu — identyczna jak w HomeScreen */}
+                    <div style={{ width: 32, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 9 }}>
+                      <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--text3)', marginBottom: 3, lineHeight: 1, whiteSpace: 'nowrap' }}>
+                        {timeStr}
+                      </span>
+                      <div style={{
+                        width: 7, height: 7, borderRadius: '50%',
+                        background: isPast ? 'var(--green)' : 'var(--bg)',
+                        border: isPast ? '2px solid var(--green)' : '2px solid var(--border)',
+                        flexShrink: 0, zIndex: 1,
+                      }} />
+                      {!isLast && (
+                        <div style={{ width: 1, flex: 1, minHeight: 12, background: isPast ? 'var(--gmid)' : 'var(--border)', marginTop: 3 }} />
                       )}
+                    </div>
+                    {/* Kafelek — oryginalny styl .cal-meal-item */}
+                    <div style={{ flex: 1, paddingBottom: isLast ? 0 : 6, minWidth: 0 }}>
+                      <div className="cal-meal-item" style={{ marginBottom: 0 }}>
+                        <div className="cmi-top-row">
+                          <div className="cmi-info">
+                            <div className="cmi-type">{m.type}</div>
+                            <div className="cmi-name">{m.name}</div>
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6, flexShrink: 0 }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                              {BADGE_ICON[m.badge] && (
+                                <i className={`ti ${BADGE_ICON[m.badge]}`} style={{
+                                  fontSize: 11,
+                                  color: m.bc === 'g' ? 'var(--green)' : m.bc === 'o' ? 'var(--orange)' : 'var(--text3)',
+                                }} />
+                              )}
+                              <span className={`cmi-badge ${m.bc}`}>{BADGE_LABEL[m.badge] ?? m.badge}</span>
+                            </div>
+                            {m.kcal > 0 && (
+                              <button
+                                onClick={() => toggleMacro(m.type)}
+                                style={{
+                                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                  width: 33, height: 33, borderRadius: 9, cursor: 'pointer',
+                                  border: expandedMacros.has(m.type) ? '1.5px solid var(--omid)' : '1.5px solid var(--border)',
+                                  background: expandedMacros.has(m.type) ? 'var(--olight)' : 'var(--bg)',
+                                  transition: 'all 0.15s',
+                                }}
+                              >
+                                <i className="ti ti-chart-bar" style={{ fontSize: 19, color: expandedMacros.has(m.type) ? 'var(--orange)' : 'var(--text3)' }} />
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                        {m.kcal > 0 && expandedMacros.has(m.type) && (
+                          <div className="cmi-macros">
+                            {[
+                              { val: m.kcal,    lbl: 'kcal',   cls: 'mc-kcal' },
+                              { val: m.protein, lbl: 'białko',  cls: 'mc-prot' },
+                              { val: m.carbs,   lbl: 'węgle',   cls: 'mc-carb' },
+                              { val: m.fat,     lbl: 'tłuszcz', cls: 'mc-fat'  },
+                            ].map(({ val, lbl, cls }) => val != null && (
+                              <div key={lbl} className="cmi-macro">
+                                <div className={`cmi-mc ${cls}`}>{val}</div>
+                                <span className="cmi-ml">{lbl}</span>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -463,24 +459,33 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
 
               // symptom entry
               const { key, scale, note } = entry;
-              const dotCls = scale >= 67 ? 'tl-dot-sym-high' : scale >= 34 ? 'tl-dot-sym-mid' : 'tl-dot-sym-low';
               const badgeCls = scale >= 67 ? 'high' : scale >= 34 ? 'mid' : 'low';
               const badgeLbl = scale >= 67 ? 'Bardzo silny' : scale >= 34 ? 'Silny' : 'Słaby';
               const symLabel = SYM_LABELS[key] ?? (key.startsWith('custom_') ? key.slice(7) : key);
               const symIcon = SYM_ICONS[key] ?? 'ti-activity';
               const symColor = scale >= 67 ? 'var(--red)' : scale >= 34 ? 'var(--amber)' : 'var(--green)';
+              const symDotBg = scale >= 67 ? 'var(--red)' : scale >= 34 ? 'var(--amber)' : 'var(--green)';
 
               return (
-                <div key={`sym-${i}-${key}`} className="tl-item">
-                  <span className="tl-time">{timeStr}</span>
-                  <div className={`tl-dot ${dotCls}`} />
-                  <div className="tl-sym-card">
-                    <div className="tl-sym-row">
-                      <i className={`ti ${symIcon}`} style={{ fontSize: 13, color: symColor, flexShrink: 0 }} />
-                      <span className="tl-sym-name">{symLabel}</span>
-                      <span className={`tl-sym-badge ${badgeCls}`}>{badgeLbl}</span>
+                <div key={`sym-${i}-${key}`} style={{ display: 'flex', gap: 0 }}>
+                  <div style={{ width: 32, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 9 }}>
+                    <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--text3)', marginBottom: 3, lineHeight: 1, whiteSpace: 'nowrap' }}>
+                      {timeStr}
+                    </span>
+                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: symDotBg, border: `2px solid ${symDotBg}`, flexShrink: 0, zIndex: 1 }} />
+                    {!isLast && (
+                      <div style={{ width: 1, flex: 1, minHeight: 12, background: 'var(--border)', marginTop: 3 }} />
+                    )}
+                  </div>
+                  <div style={{ flex: 1, paddingBottom: isLast ? 0 : 6, minWidth: 0 }}>
+                    <div className="tl-sym-card">
+                      <div className="tl-sym-row">
+                        <i className={`ti ${symIcon}`} style={{ fontSize: 13, color: symColor, flexShrink: 0 }} />
+                        <span className="tl-sym-name">{symLabel}</span>
+                        <span className={`tl-sym-badge ${badgeCls}`}>{badgeLbl}</span>
+                      </div>
+                      {note && <div className="tl-sym-note">{note}</div>}
                     </div>
-                    {note && <div className="tl-sym-note">{note}</div>}
                   </div>
                 </div>
               );

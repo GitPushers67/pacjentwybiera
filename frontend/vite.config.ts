@@ -5,4 +5,13 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: '/pacjentwybiera/',
+  server: {
+    proxy: {
+      '/wp-json': {
+        target: 'https://pacjentwybiera.pl',
+        changeOrigin: true,
+        secure: true,
+      },
+    },
+  },
 })

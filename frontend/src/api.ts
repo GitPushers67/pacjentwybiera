@@ -1,6 +1,8 @@
 import type { EatenStatus, Meal, MealOption, PatientProfile, SymptomHistoryEntry } from './types';
 
-const API_BASE = 'https://pacjentwybiera.pl/wp-json/mobilnycatering/v1/menu-schedules';
+const API_BASE = import.meta.env.DEV
+  ? '/wp-json/mobilnycatering/v1/menu-schedules'
+  : 'https://pacjentwybiera.pl/wp-json/mobilnycatering/v1/menu-schedules';
 const PATIENTS_STORAGE_KEY = 'pacjentwybiera:patients';
 
 const SLOT_META: Record<number, { id: string; icon: string; time: string; timeHour: number }> = {
