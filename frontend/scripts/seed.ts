@@ -127,6 +127,7 @@ async function main() {
     user_id: userId,
     first_name: 'Anna',
     last_name: 'Kowalska',
+    sex: 'female',
     birth_year: 1972,
     weight_kg: 63,
     height_cm: 165,

@@ -1,5 +1,4 @@
 import {
-  useEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -16,10 +15,6 @@ export function PlateSelector({ initialPct = 50, onConfirm, onCancel }: PlateSel
   const [percentage, setPercentage] = useState(Math.max(5, Math.min(100, initialPct)));
   const svgRef = useRef<SVGSVGElement>(null);
   const draggingRef = useRef(false);
-
-  useEffect(() => {
-    setPercentage(Math.max(5, Math.min(100, initialPct)));
-  }, [initialPct]);
 
   const getPiePath = (pct: number): string | null => {
     if (pct <= 0) return null;

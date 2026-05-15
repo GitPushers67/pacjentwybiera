@@ -1,6 +1,6 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
 import Navbar from "../components/Navbar";
-import type { Screen, Meal, PatientProfile, SymptomHistoryEntry, EatenStatus } from "../types";
+import type { Screen, Meal, MealOption, PatientProfile, SymptomHistoryEntry, EatenStatus, Tag } from "../types";
 import { meals as fallbackMeals } from "../data";
 import {
   getOption,
@@ -33,7 +33,15 @@ interface SlotProps {
 }
 
 
-function CardContent({ opt, flipped, aiChoice, isAiSelected, aiReason }: any) {
+interface CardContentProps {
+  opt: MealOption;
+  flipped: boolean;
+  aiChoice?: number;
+  isAiSelected: boolean;
+  aiReason?: string;
+}
+
+function CardContent({ opt, flipped, aiChoice, isAiSelected, aiReason }: CardContentProps) {
   return (
     <div className={`card-inner${flipped ? " flipped" : ""}`}>
       {/* PRZÓD */}
@@ -84,7 +92,7 @@ function CardContent({ opt, flipped, aiChoice, isAiSelected, aiReason }: any) {
             </>
           )}
           <div className="card-tags">
-            {opt.tags.map((tag: any) => (
+            {opt.tags.map((tag: Tag) => (
               <span key={tag.t} className={`tag ${tag.c}`}>
                 {tag.t}
               </span>
@@ -269,13 +277,12 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
             ...(aiChoice === undefined ? { background: '#fff', border: '1px solid var(--border)' } : {})
           }}
         >
-          <CardContent 
-            opt={nextOpt} 
-            flipped={false} 
-            aiChoice={aiChoice} 
-            isAiSelected={isNextAiSelected} 
-            aiReason={aiReason} 
-            optionIdx={nextIdx}
+          <CardContent
+            opt={nextOpt}
+            flipped={false}
+            aiChoice={aiChoice}
+            isAiSelected={isNextAiSelected}
+            aiReason={aiReason}
           />
         </div>
 
@@ -292,13 +299,12 @@ function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
-          <CardContent 
-            opt={opt} 
-            flipped={flipped} 
-            aiChoice={aiChoice} 
-            isAiSelected={isAiSelected} 
-            aiReason={aiReason} 
-            optionIdx={optionIdx}
+          <CardContent
+            opt={opt}
+            flipped={flipped}
+            aiChoice={aiChoice}
+            isAiSelected={isAiSelected}
+            aiReason={aiReason}
           />
         </div>
       </div>
@@ -368,7 +374,7 @@ export default function OrderScreen({
     // Strip biasing fields so the AI makes an independent clinical decision
     const cleanedMeals = activeMeals.map(meal => ({
       ...meal,
-      options: meal.options.map(({ isRec, score, scoreReason, why, ...rest }) => rest),
+      options: meal.options.map(({ isRec: _isRec, score: _score, scoreReason: _scoreReason, why: _why, ...rest }) => rest),
     }));
 
     const payload = {
