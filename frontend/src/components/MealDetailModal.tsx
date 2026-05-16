@@ -84,7 +84,7 @@ export default function MealDetailModal({ meal, optionIdx, onClose }: Props) {
               border: '1px solid var(--border)',
             }}>
               <i className={`ti ${icon}`} style={{ fontSize: 13, color: 'var(--text3)' }} />
-              <div className={`cmi-mc ${cls}`} style={{ width: '100%', fontSize: 12 }}>{val}</div>
+              <div className={`cmi-mc ${cls}`} style={{ width: '100%', fontSize: 12, textAlign: 'center' }}>{val}</div>
               <span style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.03em' }}>{lbl}</span>
             </div>
           ))}

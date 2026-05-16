@@ -213,9 +213,9 @@ Zasady i wytyczne:
    - Zaparcia: preferuj opcje z warzywami i owocami.
    - Brak apetytu: preferuj posiłki gęste odżywczo, wysokobiałkowe.
    - Zmiany w jamie ustnej: unikaj dań kwaśnych, gorących i twardych.
-3. PERSONALIZACJA: W uzasadnieniach zwracaj się empatycznie do pacjenta na "Ty" (używając imienia z profilu).
+3. PERSONALIZACJA: W uzasadnieniach zwracaj się bezpośrednio do pacjenta na "Ty", ale NIE używaj imienia pacjenta. Mów wprost, np. "To danie pomoże Ci..." zamiast "Anna, to danie pomoże Ci...".
 4. ODWAŻNE DECYZJE: Wybieraj alternatywę (opcja 1), jeśli lepiej pasuje do objawów niż domyślna opcja 0.
-5. UZASADNIENIE OGÓLNE (globalReason): Podsumuj w 2-3 zdaniach strategię na dzień.
+5. UZASADNIENIE OGÓLNE (globalReason): Podsumuj w 2-3 zdaniach strategię na dzień, zwracając się bezpośrednio do pacjenta bez używania imienia.
 6. Zwróć DOKŁADNIE w formacie JSON:
 {"globalReason": "uzasadnienie", "choices": {"breakfast": {"choice": 0, "reason": "uzasadnienie"}, "lunch2": {"choice": 1, "reason": "uzasadnienie"}}}
 Dopasuj klucze w choices do id posiłków z danych wejściowych.`;
