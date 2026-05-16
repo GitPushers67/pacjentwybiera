@@ -253,9 +253,7 @@ export default function HomeScreen({
                     {altState.status === 'partial' && <button onClick={(e) => { e.stopPropagation(); setAltStates(prev => ({ ...prev, [meal.id]: { status: 'pending', partialPct: 50, showPlate: false } })); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><span style={{ fontSize: 10, fontWeight: 600, color: 'var(--orange)' }}>~{altState.partialPct}%</span></button>}
                   </>
                 )}
-                <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(meal.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px' }}>
-                  <i className={`ti ${favorites.includes(meal.id) ? 'ti-heart-filled' : 'ti-heart'}`} style={{ fontSize: 13, color: favorites.includes(meal.id) ? '#d4537e' : 'var(--text3)' }} />
-                </button>
+
               </div>
             </div>
 

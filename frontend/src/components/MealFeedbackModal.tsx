@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import type { NotEatenReason } from '../types';
 import { PlateSelector } from './PlateSelector';
 
@@ -93,24 +93,30 @@ interface NotEatenProps {
 export function NotEatenFeedbackModal({ mealName, onClose, onSelectAlternative, onCancel }: NotEatenProps) {
   const [step, setStep] = useState<'reason' | 'alternative'>('reason');
   const [altIdx, setAltIdx] = useState(0);
-  const [dragStart, setDragStart] = useState<number | null>(null);
+  const dragStartX = useRef<number | null>(null);
 
   const alt = ALTERNATIVES[altIdx % ALTERNATIVES.length];
 
   const handleReason = (reason: NotEatenReason) => {
-    onClose(reason); // powiadom rodzica o powodzie
-    setStep('alternative'); // zawsze przejdź do alternatywy
+    onClose(reason);
+    setStep('alternative');
   };
 
   const nextAlt = () => setAltIdx(i => (i + 1) % ALTERNATIVES.length);
   const prevAlt = () => setAltIdx(i => (i - 1 + ALTERNATIVES.length) % ALTERNATIVES.length);
 
-  const handleDragEnd = (x: number) => {
-    if (dragStart === null) return;
-    const diff = x - dragStart;
-    if (diff < -40) nextAlt();
-    else if (diff > 40) prevAlt();
-    setDragStart(null);
+  const onSwipeDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    dragStartX.current = e.clientX;
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const onSwipeUp = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (dragStartX.current !== null) {
+      const diff = e.clientX - dragStartX.current;
+      if (diff < -40) nextAlt();
+      else if (diff > 40) prevAlt();
+    }
+    dragStartX.current = null;
+    e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
   if (step === 'alternative') {
@@ -137,10 +143,10 @@ export function NotEatenFeedbackModal({ mealName, onClose, onSelectAlternative, 
 
           {/* Swipeable karta */}
           <div
-            style={{ background: 'var(--olight)', border: '1.5px solid var(--omid)', borderRadius: 16, padding: '14px', marginBottom: 12, cursor: 'grab', userSelect: 'none' }}
-            onPointerDown={(e) => setDragStart(e.clientX)}
-            onPointerUp={(e) => handleDragEnd(e.clientX)}
-            onPointerCancel={() => setDragStart(null)}
+            style={{ background: 'var(--olight)', border: '1.5px solid var(--omid)', borderRadius: 16, padding: '14px', marginBottom: 12, cursor: 'grab', userSelect: 'none', touchAction: 'pan-y' }}
+            onPointerDown={onSwipeDown}
+            onPointerUp={onSwipeUp}
+            onPointerCancel={(e) => { dragStartX.current = null; e.currentTarget.releasePointerCapture(e.pointerId); }}
           >
             {/* Dots */}
             <div style={{ display: 'flex', justifyContent: 'center', gap: 5, marginBottom: 10 }}>
@@ -249,6 +255,10 @@ interface PartialProps {
 }
 
 export function PartialFeedbackModal({ mealName, initialPct = 50, protein, kcal, onConfirm, onCancel }: PartialProps) {
+  const [livePct, setLivePct] = useState(Math.max(5, Math.min(100, initialPct)));
+  const liveProtein = Math.round(protein * livePct / 100);
+  const liveKcal = Math.round(kcal * livePct / 100);
+
   return (
     <>
       <div className="modal-backdrop" onClick={onCancel} />
@@ -278,12 +288,12 @@ export function PartialFeedbackModal({ mealName, initialPct = 50, protein, kcal,
 
         <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
           <div style={{ flex: 1, background: 'rgba(59,130,246,0.08)', border: '1.5px solid rgba(59,130,246,0.25)', borderRadius: 11, padding: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: '#3b82f6' }}>{protein}g</div>
-            <div style={{ fontSize: 10, color: 'var(--text2)', marginTop: 1 }}>białka (100%)</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: '#3b82f6', transition: 'all 0.15s' }}>{liveProtein}g</div>
+            <div style={{ fontSize: 10, color: 'var(--text2)', marginTop: 1 }}>białka ({livePct}%)</div>
           </div>
           <div style={{ flex: 1, background: 'var(--olight)', border: '1.5px solid var(--omid)', borderRadius: 11, padding: '8px', textAlign: 'center' }}>
-            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--orange)' }}>{kcal}</div>
-            <div style={{ fontSize: 10, color: 'var(--text2)', marginTop: 1 }}>kcal (100%)</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--orange)', transition: 'all 0.15s' }}>{liveKcal}</div>
+            <div style={{ fontSize: 10, color: 'var(--text2)', marginTop: 1 }}>kcal ({livePct}%)</div>
           </div>
         </div>
 
@@ -291,6 +301,7 @@ export function PartialFeedbackModal({ mealName, initialPct = 50, protein, kcal,
           initialPct={initialPct}
           onConfirm={onConfirm}
           onCancel={onCancel}
+          onPctChange={setLivePct}
         />
       </div>
     </>

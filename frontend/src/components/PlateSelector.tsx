@@ -9,9 +9,10 @@ interface PlateSelectorProps {
   initialPct?: number;
   onConfirm: (pct: number) => void;
   onCancel: () => void;
+  onPctChange?: (pct: number) => void;
 }
 
-export function PlateSelector({ initialPct = 50, onConfirm, onCancel }: PlateSelectorProps) {
+export function PlateSelector({ initialPct = 50, onConfirm, onCancel, onPctChange }: PlateSelectorProps) {
   const [percentage, setPercentage] = useState(Math.max(5, Math.min(100, initialPct)));
   const svgRef = useRef<SVGSVGElement>(null);
   const draggingRef = useRef(false);
@@ -58,12 +59,16 @@ export function PlateSelector({ initialPct = 50, onConfirm, onCancel }: PlateSel
   const handlePointerDown = (e: PointerEvent<SVGSVGElement>) => {
     draggingRef.current = true;
     e.currentTarget.setPointerCapture(e.pointerId);
-    setPercentage(calcPct(e.clientX, e.clientY));
+    const p = calcPct(e.clientX, e.clientY);
+    setPercentage(p);
+    onPctChange?.(p);
   };
 
   const handlePointerMove = (e: PointerEvent<SVGSVGElement>) => {
     if (!draggingRef.current) return;
-    setPercentage(calcPct(e.clientX, e.clientY));
+    const p = calcPct(e.clientX, e.clientY);
+    setPercentage(p);
+    onPctChange?.(p);
   };
 
   const handlePointerUp = (e: PointerEvent<SVGSVGElement>) => {
@@ -74,10 +79,13 @@ export function PlateSelector({ initialPct = 50, onConfirm, onCancel }: PlateSel
 
   const handlePresetClick = (pct: number) => {
     setPercentage(pct);
+    onPctChange?.(pct);
   };
 
   const handleSliderChange = (e: ChangeEvent<HTMLInputElement>) => {
-    setPercentage(Math.max(5, Math.min(100, parseInt(e.target.value, 10))));
+    const p = Math.max(5, Math.min(100, parseInt(e.target.value, 10)));
+    setPercentage(p);
+    onPctChange?.(p);
   };
 
   const handleConfirm = () => {

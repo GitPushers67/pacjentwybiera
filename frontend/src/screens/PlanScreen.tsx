@@ -386,18 +386,19 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
                 return (
                   <div key={`meal-${m.type}`} style={{ display: 'flex', gap: 0 }}>
                     {/* Oś czasu — identyczna jak w HomeScreen */}
-                    <div style={{ width: 32, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 9 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', marginBottom: 4, lineHeight: 1, whiteSpace: 'nowrap' }}>
+                    <div style={{ width: 44, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 14 }}>
+                      <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', marginBottom: 8, lineHeight: 1, whiteSpace: 'nowrap' }}>
                         {timeStr}
                       </span>
                       <div style={{
-                        width: 7, height: 7, borderRadius: '50%',
+                        width: 9, height: 9, borderRadius: '50%',
                         background: isPast ? 'var(--green)' : 'var(--bg)',
                         border: isPast ? '2px solid var(--green)' : '2px solid var(--border)',
+                        boxShadow: isPast ? '0 0 0 3px rgba(34, 197, 94, 0.15)' : 'none',
                         flexShrink: 0, zIndex: 1,
                       }} />
                       {!isLast && (
-                        <div style={{ width: 1, flex: 1, minHeight: 12, background: isPast ? 'var(--gmid)' : 'var(--border)', marginTop: 3 }} />
+                        <div style={{ width: 2, flex: 1, minHeight: 16, background: isPast ? 'rgba(34, 197, 94, 0.3)' : 'var(--border)', marginTop: 6 }} />
                       )}
                     </div>
                     {/* Kafelek — oryginalny styl .cal-meal-item */}
@@ -466,13 +467,13 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
 
               return (
                 <div key={`sym-${i}-${key}`} style={{ display: 'flex', gap: 0 }}>
-                  <div style={{ width: 32, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 9 }}>
-                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', marginBottom: 4, lineHeight: 1, whiteSpace: 'nowrap' }}>
+                  <div style={{ width: 44, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 14 }}>
+                    <span style={{ fontSize: 11, fontWeight: 700, color: 'var(--text3)', marginBottom: 8, lineHeight: 1, whiteSpace: 'nowrap' }}>
                       {timeStr}
                     </span>
-                    <div style={{ width: 7, height: 7, borderRadius: '50%', background: symDotBg, border: `2px solid ${symDotBg}`, flexShrink: 0, zIndex: 1 }} />
+                    <div style={{ width: 9, height: 9, borderRadius: '50%', background: symDotBg, border: `2px solid ${symDotBg}`, flexShrink: 0, zIndex: 1, boxShadow: `0 0 0 3px ${symDotBg}22` }} />
                     {!isLast && (
-                      <div style={{ width: 1, flex: 1, minHeight: 12, background: 'var(--border)', marginTop: 3 }} />
+                      <div style={{ width: 2, flex: 1, minHeight: 16, background: `var(--border)`, marginTop: 6 }} />
                     )}
                   </div>
                   <div style={{ flex: 1, paddingBottom: isLast ? 0 : 6, minWidth: 0 }}>

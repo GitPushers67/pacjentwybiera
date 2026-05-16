@@ -789,8 +789,8 @@ ion-app {
 
 .week-bar {
   display: flex;
-  gap: 4px;
-  padding: 0 16px 12px;
+  gap: 6px;
+  padding: 4px 16px 16px;
   flex-shrink: 0;
 }
 
@@ -799,27 +799,34 @@ ion-app {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 7px 0 11px;
-  border-radius: 12px;
+  padding: 10px 0 14px;
+  border-radius: 16px;
   cursor: pointer;
   border: 1px solid transparent;
-  background: transparent;
+  background: var(--card);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.02);
   touch-action: manipulation;
   position: relative;
+  transition: all 0.2s ease;
 }
 
 .dp span:first-child {
-  font-size: 9px;
-  color: var(--text2);
-  margin-bottom: 2px;
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text3);
+  margin-bottom: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 .dp .dn {
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 15px;
+  font-weight: 700;
   color: var(--text);
 }
 .dp.on {
   background: var(--orange);
+  box-shadow: 0 4px 12px rgba(249, 115, 22, 0.2);
+  transform: translateY(-2px);
 }
 .dp.on span {
   color: #fff;
@@ -897,42 +904,48 @@ ion-app {
 
 .cal-meal-item {
   background: var(--card);
-  border-radius: 13px;
-  border: 1px solid var(--border);
-  padding: 11px 13px;
+  border-radius: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.04);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.03);
+  padding: 14px 16px;
   display: flex;
   flex-direction: column;
   gap: 0;
-  margin-bottom: 7px;
+  margin-bottom: 0px;
+  transition: all 0.2s ease;
+}
+.cal-meal-item:hover {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
 }
 .cmi-top-row {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
 }
 .cmi-info {
   flex: 1;
 }
 .cmi-type {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
   color: var(--text3);
   text-transform: uppercase;
-  letter-spacing: 0.06em;
+  letter-spacing: 0.08em;
 }
 .cmi-name {
-  font-size: 14px;
+  font-size: 15px;
   font-weight: 700;
   color: var(--text);
-  margin-top: 2px;
-  line-height: 1.3;
+  margin-top: 4px;
+  line-height: 1.35;
 }
 .cmi-badge {
   font-size: 11px;
-  font-weight: 600;
-  padding: 3px 8px;
+  font-weight: 700;
+  padding: 4px 10px;
   border-radius: 12px;
   flex-shrink: 0;
+  letter-spacing: 0.02em;
 }
 .cmi-badge.g {
   background: var(--glight);
@@ -950,54 +963,45 @@ ion-app {
 
 .cmi-macros {
   display: flex;
-  gap: 6px;
-  margin-top: 9px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border);
+  gap: 8px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--border);
 }
 .cmi-macro {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
+  gap: 4px;
   flex: 1;
+  background: var(--bg);
+  padding: 8px 0;
+  border-radius: 12px;
+  border: 1px solid var(--border);
 }
 .cmi-mc {
-  height: 26px;
-  width: 100%;
-  border-radius: 7px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 11px;
-  font-weight: 700;
-  border: 1.5px solid;
+  font-size: 14px;
+  font-weight: 800;
+  line-height: 1;
 }
 .cmi-ml {
   font-size: 9px;
   color: var(--text3);
-  font-weight: 500;
-  text-align: center;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 .mc-kcal {
-  background: var(--olight);
   color: var(--orange);
-  border-color: var(--omid);
 }
 .mc-prot {
-  background: rgba(59, 130, 246, 0.1);
   color: #3b82f6;
-  border-color: rgba(59, 130, 246, 0.3);
 }
 .mc-carb {
-  background: var(--glight);
   color: var(--green);
-  border-color: var(--gmid);
 }
 .mc-fat {
-  background: var(--bg);
   color: var(--text2);
-  border-color: var(--border);
 }
 
 .home-stat-pill {
@@ -1893,10 +1897,10 @@ ion-app {
 }
 
 .meal-btn--ate {
-  background: linear-gradient(135deg, var(--meal-green) 0%, var(--meal-green-dark) 100%);
-  border: none;
-  color: white;
-  font-weight: 800;
+  background: rgba(34, 197, 94, 0.08);
+  border-color: rgba(34, 197, 94, 0.35);
+  color: var(--meal-green);
+  font-weight: 700;
 }
 
 .meal-change-link {
@@ -2215,18 +2219,19 @@ ion-app {
 
 .tl-sym-card {
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 11px;
-  padding: 9px 12px;
+  border: 1px solid rgba(0,0,0,0.03);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.02);
+  border-radius: 16px;
+  padding: 12px 14px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
 }
 
 .tl-sym-row {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
 }
 
 .tl-sym-name {
