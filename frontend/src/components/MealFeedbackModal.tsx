@@ -20,7 +20,8 @@ const ENCOURAGEMENTS = [
 ];
 
 export function EatenFeedbackModal({ mealName, protein, kcal, onClose }: EatenProps) {
-  const msg = ENCOURAGEMENTS[Math.floor(Math.random() * ENCOURAGEMENTS.length)];
+  const msgIdx = mealName.split('').reduce((sum, ch) => sum + ch.charCodeAt(0), 0) % ENCOURAGEMENTS.length;
+  const msg = ENCOURAGEMENTS[msgIdx];
 
   return (
     <>
@@ -64,7 +65,7 @@ export function EatenFeedbackModal({ mealName, protein, kcal, onClose }: EatenPr
 
 // ─── Not-eaten feedback ───────────────────────────────────────────────────────
 
-export const MEAL_ALTERNATIVES = [
+const MEAL_ALTERNATIVES = [
   { name: 'Kleik ryżowy z miodem i bananem', tip: 'Ugotuj ½ szklanki ryżu w 2 szklankach mleka, dodaj łyżkę miodu i pokrojonego banana.', protein: 8, kcal: 280 },
   { name: 'Jogurt naturalny z musem owocowym', tip: 'Zmiksuj jogurt z dojrzałym bananem lub brzoskwinią. Łatwe do przełknięcia, bogate w białko.', protein: 10, kcal: 190 },
   { name: 'Koktajl bananowo-mleczny', tip: 'Zmiksuj banana z mlekiem i łyżką miodu. Szybkie 200 kcal i 8g białka w szklance.', protein: 8, kcal: 200 },
@@ -72,7 +73,7 @@ export const MEAL_ALTERNATIVES = [
   { name: 'Twarożek z rzodkiewką i szczypiorkiem', tip: 'Lekka kolacja na zimno. Twaróg dostarcza białka, nie obciąża żołądka przed snem.', protein: 14, kcal: 160 },
 ];
 
-export type MealAlternative = typeof MEAL_ALTERNATIVES[0];
+type MealAlternative = typeof MEAL_ALTERNATIVES[0];
 
 const ALTERNATIVES = MEAL_ALTERNATIVES;
 
@@ -93,12 +94,10 @@ export function NotEatenFeedbackModal({ mealName, onClose, onSelectAlternative, 
   const [step, setStep] = useState<'reason' | 'alternative'>('reason');
   const [altIdx, setAltIdx] = useState(0);
   const [dragStart, setDragStart] = useState<number | null>(null);
-  const [selectedReason, setSelectedReason] = useState<NotEatenReason | null>(null);
 
   const alt = ALTERNATIVES[altIdx % ALTERNATIVES.length];
 
   const handleReason = (reason: NotEatenReason) => {
-    setSelectedReason(reason);
     onClose(reason); // powiadom rodzica o powodzie
     setStep('alternative'); // zawsze przejdź do alternatywy
   };

@@ -15,10 +15,16 @@ import logo from "../assets/logo.png";
 import TopbarDate from "../components/TopbarDate";
 import { ensureDayMeals, getMealLogs, updateMealStatus } from "../services/mealLogs";
 import MealDetailModal from "../components/MealDetailModal";
-import { EatenFeedbackModal, NotEatenFeedbackModal, PartialFeedbackModal, type MealAlternative } from "../components/MealFeedbackModal";
+import { EatenFeedbackModal, NotEatenFeedbackModal, PartialFeedbackModal } from "../components/MealFeedbackModal";
 import { MealActionButtons } from "../components/MealActionButtons";
 import { PartialMealBadge } from "../components/PartialMealBadge";
-import { PlateSelector } from "../components/PlateSelector";
+
+type MealAlternative = {
+  name: string;
+  tip: string;
+  protein: number;
+  kcal: number;
+};
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -82,6 +88,10 @@ export default function HomeScreen({
   const [altStates, setAltStates] = useState<Record<string, { status: 'pending'|'eaten'|'partial'|'not_eaten'; partialPct: number; showPlate: boolean }>>({});
   // Aktywna strona karty: 0 = oryginał, 1 = alternatywa
   const [cardSide, setCardSide] = useState<Record<string, 0|1>>({});
+  const swipeStartXRef = useRef<Record<string, number>>({});
+  const swipeDxRef = useRef<Record<string, number>>({});
+  const swipeDraggingRef = useRef<Record<string, boolean>>({});
+  const swipeDidDragRef = useRef<Record<string, boolean>>({});
 
   const today = useMemo(() => getToday(), []);
   const nowHour = new Date().getHours() + new Date().getMinutes() / 60;
@@ -156,12 +166,6 @@ export default function HomeScreen({
     const side = cardSide[meal.id] ?? 0;
     const altState = altStates[meal.id] ?? { status: 'pending', partialPct: 50, showPlate: false };
 
-    // Swipe refs per meal
-    const startXRef = useRef(0);
-    const dxRef = useRef(0);
-    const draggingRef = useRef(false);
-    const didDragRef = useRef(false);
-
     const bodyBg =
       state.status === 'eaten' || state.status === ('eaten_alternative' as string) ? 'var(--meal-green-light-bg)' :
       state.status === 'not_eaten' ? 'var(--meal-red-light-bg)' :
@@ -178,24 +182,26 @@ export default function HomeScreen({
 
     const handlePointerDown = (e: React.PointerEvent) => {
       if (!alt) return;
-      draggingRef.current = true;
-      didDragRef.current = false;
-      startXRef.current = e.clientX;
-      dxRef.current = 0;
+      swipeDraggingRef.current[meal.id] = true;
+      swipeDidDragRef.current[meal.id] = false;
+      swipeStartXRef.current[meal.id] = e.clientX;
+      swipeDxRef.current[meal.id] = 0;
     };
     const handlePointerMove = (e: React.PointerEvent) => {
-      if (!draggingRef.current) return;
-      dxRef.current = e.clientX - startXRef.current;
-      if (Math.abs(dxRef.current) > 8) didDragRef.current = true;
+      if (!swipeDraggingRef.current[meal.id]) return;
+      const deltaX = e.clientX - (swipeStartXRef.current[meal.id] ?? e.clientX);
+      swipeDxRef.current[meal.id] = deltaX;
+      if (Math.abs(deltaX) > 8) swipeDidDragRef.current[meal.id] = true;
     };
     const handlePointerUp = () => {
-      if (!draggingRef.current) return;
-      draggingRef.current = false;
-      if (didDragRef.current) {
-        if (dxRef.current < -40 && side === 0) setSide(1);
-        else if (dxRef.current > 40 && side === 1) setSide(0);
+      if (!swipeDraggingRef.current[meal.id]) return;
+      swipeDraggingRef.current[meal.id] = false;
+      const deltaX = swipeDxRef.current[meal.id] ?? 0;
+      if (swipeDidDragRef.current[meal.id]) {
+        if (deltaX < -40 && side === 0) setSide(1);
+        else if (deltaX > 40 && side === 1) setSide(0);
       }
-      dxRef.current = 0;
+      swipeDxRef.current[meal.id] = 0;
     };
 
     return (

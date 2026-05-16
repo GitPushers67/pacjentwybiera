@@ -39,7 +39,6 @@ export default function AddSymScreen({
   setSymptoms,
   symptomHistory,
   setSymptomHistory,
-  streak,
 }: Props) {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
