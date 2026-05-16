@@ -356,11 +356,11 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
 
       <div className="scroll">
         {/* ── Day header ────────────────────────────────── */}
-        <div style={{ marginBottom: 12 }}>
-          <p style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', marginBottom: 2 }}>
+        <div style={{ marginBottom: 16 }}>
+          <p style={{ fontSize: 15, fontWeight: 700, color: 'var(--text)', marginBottom: 4 }}>
             {day.label}
           </p>
-          <p style={{ fontSize: 11, color: 'var(--text2)', marginBottom: 0 }}>
+          <p style={{ fontSize: 13, fontWeight: 500, color: 'var(--text2)', marginBottom: 0 }}>
             {day.sub}
           </p>
         </div>
@@ -387,7 +387,7 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
                   <div key={`meal-${m.type}`} style={{ display: 'flex', gap: 0 }}>
                     {/* Oś czasu — identyczna jak w HomeScreen */}
                     <div style={{ width: 32, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 9 }}>
-                      <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--text3)', marginBottom: 3, lineHeight: 1, whiteSpace: 'nowrap' }}>
+                      <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', marginBottom: 4, lineHeight: 1, whiteSpace: 'nowrap' }}>
                         {timeStr}
                       </span>
                       <div style={{
@@ -467,7 +467,7 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
               return (
                 <div key={`sym-${i}-${key}`} style={{ display: 'flex', gap: 0 }}>
                   <div style={{ width: 32, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 9 }}>
-                    <span style={{ fontSize: 9, fontWeight: 600, color: 'var(--text3)', marginBottom: 3, lineHeight: 1, whiteSpace: 'nowrap' }}>
+                    <span style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', marginBottom: 4, lineHeight: 1, whiteSpace: 'nowrap' }}>
                       {timeStr}
                     </span>
                     <div style={{ width: 7, height: 7, borderRadius: '50%', background: symDotBg, border: `2px solid ${symDotBg}`, flexShrink: 0, zIndex: 1 }} />
@@ -478,11 +478,11 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
                   <div style={{ flex: 1, paddingBottom: isLast ? 0 : 6, minWidth: 0 }}>
                     <div className="tl-sym-card">
                       <div className="tl-sym-row">
-                        <i className={`ti ${symIcon}`} style={{ fontSize: 13, color: symColor, flexShrink: 0 }} />
-                        <span className="tl-sym-name">{symLabel}</span>
-                        <span className={`tl-sym-badge ${badgeCls}`}>{badgeLbl}</span>
+                        <i className={`ti ${symIcon}`} style={{ fontSize: 14, color: symColor, flexShrink: 0 }} />
+                        <span className="tl-sym-name" style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)' }}>{symLabel}</span>
+                        <span className={`tl-sym-badge ${badgeCls}`} style={{ fontSize: 10, fontWeight: 600 }}>{badgeLbl}</span>
                       </div>
-                      {note && <div className="tl-sym-note">{note}</div>}
+                      {note && <div className="tl-sym-note" style={{ fontSize: 12, color: 'var(--text2)', marginTop: 4 }}>{note}</div>}
                     </div>
                   </div>
                 </div>

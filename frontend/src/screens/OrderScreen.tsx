@@ -39,9 +39,11 @@ function MealSlot({ meal, selectedIdx, onSelect, aiIdx, aiReason, onShowDetail }
   const cardRef = useRef<HTMLDivElement>(null);
   const frontRef = useRef<HTMLDivElement>(null);
   const backRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
   const startX = useRef(0);
   const dx = useRef(0);
   const dragging = useRef(false);
+  const [isDragging, setIsDragging] = useState(false);
   const dirLocked = useRef<'h' | 'v' | null>(null);
   const startY = useRef(0);
   const didDrag = useRef(false);
@@ -82,12 +84,13 @@ function MealSlot({ meal, selectedIdx, onSelect, aiIdx, aiReason, onShowDetail }
   }, [totalOpts, onSelect]);
   const onPointerDown = (e: React.PointerEvent) => {
     dragging.current = true;
+    setIsDragging(true);
     didDrag.current = false;
     startX.current = e.clientX;
     startY.current = e.clientY;
     dx.current = 0;
     dirLocked.current = null;
-    if (cardRef.current) cardRef.current.style.transition = 'none';
+    e.currentTarget.setPointerCapture(e.pointerId);
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
@@ -102,23 +105,31 @@ function MealSlot({ meal, selectedIdx, onSelect, aiIdx, aiReason, onShowDetail }
     e.stopPropagation();
     if (Math.abs(deltaX) > 8) didDrag.current = true;
     dx.current = deltaX;
-    if (cardRef.current) cardRef.current.style.transform = `translateX(${dx.current * 0.3}px)`;
+    
+    if (trackRef.current) {
+      const basePct = -(currentView * (100 / totalOpts));
+      trackRef.current.style.transform = `translateX(calc(${basePct}% + ${dx.current}px))`;
+    }
   };
 
-  const onPointerUp = () => {
+  const onPointerUp = (e: React.PointerEvent) => {
     if (!dragging.current) return;
     dragging.current = false;
-    if (cardRef.current) {
-      cardRef.current.style.transition = 'transform 0.2s ease';
-      cardRef.current.style.transform = 'translateX(0)';
+    setIsDragging(false);
+    
+    let newView = currentView;
+    if (dx.current < -50 && currentView < totalOpts - 1) newView = currentView + 1;
+    else if (dx.current > 50 && currentView > 0) newView = currentView - 1;
+
+    if (trackRef.current) {
+      trackRef.current.style.transform = `translateX(-${newView * (100 / totalOpts)}%)`;
     }
-    if (dx.current < -50 && currentView < totalOpts - 1) swipeTo(currentView + 1);
-    else if (dx.current > 50 && currentView > 0) swipeTo(currentView - 1);
-    else if (!didDrag.current) {
-      // tap — flip karta
-      setFlipped(f => !f);
-    }
+
+    if (newView !== currentView) swipeTo(newView);
+    else if (!didDrag.current && aiIdx !== undefined) setFlipped(f => !f);
+
     dx.current = 0;
+    e.currentTarget.releasePointerCapture(e.pointerId);
   };
 
   const cardBg = '#fff';
@@ -165,6 +176,7 @@ function MealSlot({ meal, selectedIdx, onSelect, aiIdx, aiReason, onShowDetail }
             transition: 'transform 0.45s cubic-bezier(0.4,0,0.2,1)',
             transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
             cursor: 'pointer',
+            touchAction: 'pan-y',
           }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
@@ -175,47 +187,61 @@ function MealSlot({ meal, selectedIdx, onSelect, aiIdx, aiReason, onShowDetail }
           <div
             ref={frontRef}
             style={{
-            backfaceVisibility: 'hidden',
-            WebkitBackfaceVisibility: 'hidden',
-            padding: '12px 14px',
-            background: cardBg,
-            borderStyle: 'solid',
-            borderColor: cardBorderColor,
-            borderWidth: '0 1px 1px 1px',
-            borderRadius: '0 0 16px 16px',
+              backfaceVisibility: 'hidden',
+              WebkitBackfaceVisibility: 'hidden',
+              background: cardBg,
+              borderStyle: 'solid',
+              borderColor: cardBorderColor,
+              borderWidth: '0 1px 1px 1px',
+              borderRadius: '0 0 16px 16px',
+              overflow: 'hidden',
             }}
           >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.35, marginBottom: 6 }}>{opt.name}</div>
-                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                  <span className="tag b">{opt.protein}g białka</span>
-                  <span className="tag">{opt.kcal} kcal</span>
-                  {opt.tags?.filter(t => t.c === 'g').slice(0, 2).map(t => (
-                    <span key={t.t} className="tag g">{t.t}</span>
-                  ))}
-                  {opt.allergensText && (
-                    <span className="tag a" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                      <i className="ti ti-alert-triangle" style={{ fontSize: 8 }} />alergeny
+            <div
+              ref={trackRef}
+              style={{
+                display: 'flex',
+                width: `${totalOpts * 100}%`,
+                transform: `translateX(-${currentView * (100 / totalOpts)}%)`,
+                transition: isDragging ? 'none' : 'transform 0.25s cubic-bezier(0.4,0,0.2,1)',
+              }}
+            >
+              {meal.options.map((option, idx) => (
+                <div key={idx} style={{ width: `${100 / totalOpts}%`, padding: '12px 14px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.35, marginBottom: 6 }}>{option.name}</div>
+                      <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                        <span className="tag b">{option.protein}g białka</span>
+                        <span className="tag">{option.kcal} kcal</span>
+                        {option.tags?.filter(t => t.c === 'g').slice(0, 2).map(t => (
+                          <span key={t.t} className="tag g">{t.t}</span>
+                        ))}
+                        {option.allergensText && (
+                          <span className="tag a" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            <i className="ti ti-alert-triangle" style={{ fontSize: 8 }} />alergeny
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); onShowDetail(idx); }}
+                      onPointerDown={(e) => e.stopPropagation()}
+                      onPointerUp={(e) => e.stopPropagation()}
+                      style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+                    >
+                      <i className="ti ti-info-circle" style={{ fontSize: 13, color: 'var(--text3)' }} />
+                    </button>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 4, marginTop: 8, opacity: 0.4 }}>
+                    <i className="ti ti-arrow-left" style={{ fontSize: 9, color: 'var(--text3)' }} />
+                    <span style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                      {aiIdx !== undefined ? 'dotknij po uzasadnienie AI · przesuń by zmienić' : 'przesuń, by zmienić opcję'}
                     </span>
-                  )}
+                    <i className="ti ti-arrow-right" style={{ fontSize: 9, color: 'var(--text3)' }} />
+                  </div>
                 </div>
-              </div>
-              <button
-                onClick={(e) => { e.stopPropagation(); onShowDetail(currentView); }}
-                onPointerDown={(e) => e.stopPropagation()}
-                onPointerUp={(e) => e.stopPropagation()}
-                style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
-              >
-                <i className="ti ti-info-circle" style={{ fontSize: 13, color: 'var(--text3)' }} />
-              </button>
-            </div>
-            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 4, marginTop: 8, opacity: 0.4 }}>
-              <i className="ti ti-arrow-left" style={{ fontSize: 9, color: 'var(--text3)' }} />
-              <span style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
-                {aiIdx !== undefined ? 'dotknij po uzasadnienie AI · przesuń by zmienić' : 'przesuń, by zmienić opcję'}
-              </span>
-              <i className="ti ti-arrow-right" style={{ fontSize: 9, color: 'var(--text3)' }} />
+              ))}
             </div>
           </div>
 
@@ -297,6 +323,19 @@ export default function OrderScreen({
       }
       setLoading(false);
     });
+
+    try {
+      const cached = localStorage.getItem(`ai_rec_${orderDateStr}`);
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        setAiChoices(parsed.aiChoices || {});
+        setAiReasons(parsed.aiReasons || {});
+        setGlobalAiReason(parsed.globalReason || null);
+        setAiApplied(true);
+      }
+    } catch (e) {
+      console.error('Failed to parse AI cache', e);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderDateStr]);
 
@@ -322,6 +361,16 @@ export default function OrderScreen({
       setAiReasons(newReasons);
       setGlobalAiReason(result.globalReason);
       setAiApplied(true);
+      
+      try {
+        localStorage.setItem(`ai_rec_${orderDateStr}`, JSON.stringify({
+          aiChoices: newChoices,
+          aiReasons: newReasons,
+          globalReason: result.globalReason
+        }));
+      } catch (e) {
+        console.error('Failed to save AI cache', e);
+      }
     } else {
       alert("Błąd podczas pobierania rekomendacji z serwera.");
     }
@@ -404,47 +453,68 @@ export default function OrderScreen({
             ))}
 
             {/* Podsumowanie */}
-            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px', marginBottom: 8 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 10 }}>Podsumowanie zamówienia</div>
-              {activeMeals.map((meal) => {
-                const opt = getOption(meal, choices[meal.id] ?? 0);
-                const isAiMatch = aiChoices[meal.id] !== undefined && aiChoices[meal.id] === (choices[meal.id] ?? 0);
-                const isAiMismatch = aiChoices[meal.id] !== undefined && aiChoices[meal.id] !== (choices[meal.id] ?? 0);
-                return (
-                  <div key={meal.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
-                    <span style={{ fontSize: 11, color: 'var(--text2)', flexShrink: 0, width: 88 }}>{meal.title}</span>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1, justifyContent: 'flex-end', paddingLeft: 8, minWidth: 0 }}>
-                      {isAiMatch && <i className="ti ti-brain" style={{ fontSize: 10, color: 'var(--green)', flexShrink: 0 }} />}
-                      {isAiMismatch && <i className="ti ti-arrows-exchange" style={{ fontSize: 10, color: 'var(--orange)', flexShrink: 0 }} />}
-                      <span style={{ fontSize: 11, fontWeight: 600, color: isAiMatch ? 'var(--green)' : isAiMismatch ? 'var(--orange)' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {opt.name}
-                      </span>
+            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, padding: '0', marginBottom: 8, overflow: 'hidden' }}>
+              <div style={{ padding: '12px 14px', borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>Podsumowanie zamówienia</div>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--border)', background: 'var(--alight)' }}>
+                      <th style={{ padding: '8px 14px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Posiłek</th>
+                      <th style={{ padding: '8px 14px', fontSize: 10, fontWeight: 600, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.04em', textAlign: 'right' }}>Wybrane danie</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {activeMeals.map((meal, idx) => {
+                      const opt = getOption(meal, choices[meal.id] ?? 0);
+                      const isAiMatch = aiChoices[meal.id] !== undefined && aiChoices[meal.id] === (choices[meal.id] ?? 0);
+                      const isAiMismatch = aiChoices[meal.id] !== undefined && aiChoices[meal.id] !== (choices[meal.id] ?? 0);
+                      return (
+                        <tr key={meal.id} style={{ borderBottom: idx === activeMeals.length - 1 ? 'none' : '1px solid var(--border)', background: idx % 2 === 0 ? 'var(--card)' : 'var(--bg)' }}>
+                          <td style={{ padding: '10px 14px', fontSize: 11, fontWeight: 600, color: 'var(--text2)', whiteSpace: 'nowrap' }}>
+                            {meal.title}
+                          </td>
+                          <td style={{ padding: '10px 14px', textAlign: 'right' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: 5, justifyContent: 'flex-end' }}>
+                              {isAiMatch && <i className="ti ti-brain" style={{ fontSize: 11, color: 'var(--green)', flexShrink: 0 }} />}
+                              {isAiMismatch && <i className="ti ti-arrows-exchange" style={{ fontSize: 11, color: 'var(--orange)', flexShrink: 0 }} />}
+                              <span style={{ fontSize: 12, fontWeight: 600, color: isAiMatch ? 'var(--green)' : isAiMismatch ? 'var(--orange)' : 'var(--text)' }}>
+                                {opt.name}
+                              </span>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+
+              <div style={{ padding: '12px 14px', borderTop: '1px solid var(--border)' }}>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <div style={{ flex: 1, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 10, padding: '8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: '#3b82f6' }}>{totalProtein}g</div>
+                    <div style={{ fontSize: 10, color: 'var(--text2)' }}>białko</div>
+                  </div>
+                  <div style={{ flex: 1, background: 'var(--olight)', border: '1px solid var(--omid)', borderRadius: 10, padding: '8px', textAlign: 'center' }}>
+                    <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--orange)' }}>{totalKcal}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text2)' }}>kcal</div>
+                  </div>
+                </div>
+                {Object.keys(aiChoices).length > 0 && (
+                  <div style={{ display: 'flex', gap: 12, marginTop: 12, paddingTop: 10, borderTop: '1px dashed var(--border)', justifyContent: 'center' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <i className="ti ti-brain" style={{ fontSize: 11, color: 'var(--green)' }} />
+                      <span style={{ fontSize: 10, color: 'var(--text3)' }}>Zgodne z AI</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <i className="ti ti-arrows-exchange" style={{ fontSize: 11, color: 'var(--orange)' }} />
+                      <span style={{ fontSize: 10, color: 'var(--text3)' }}>Zmienione przez Ciebie</span>
                     </div>
                   </div>
-                );
-              })}
-              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                <div style={{ flex: 1, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 10, padding: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: '#3b82f6' }}>{totalProtein}g</div>
-                  <div style={{ fontSize: 10, color: 'var(--text2)' }}>białko</div>
-                </div>
-                <div style={{ flex: 1, background: 'var(--olight)', border: '1px solid var(--omid)', borderRadius: 10, padding: '8px', textAlign: 'center' }}>
-                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--orange)' }}>{totalKcal}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text2)' }}>kcal</div>
-                </div>
+                )}
               </div>
-              {Object.keys(aiChoices).length > 0 && (
-                <div style={{ display: 'flex', gap: 12, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <i className="ti ti-brain" style={{ fontSize: 10, color: 'var(--green)' }} />
-                    <span style={{ fontSize: 10, color: 'var(--text3)' }}>Zgodne z AI</span>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <i className="ti ti-arrows-exchange" style={{ fontSize: 10, color: 'var(--orange)' }} />
-                    <span style={{ fontSize: 10, color: 'var(--text3)' }}>Zmienione przez Ciebie</span>
-                  </div>
-                </div>
-              )}
             </div>
 
             <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>

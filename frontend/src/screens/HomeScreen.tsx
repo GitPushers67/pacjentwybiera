@@ -126,6 +126,11 @@ export default function HomeScreen({
   const currentMealId = getCurrentMealId();
   const sortedMeals = [...meals].sort((a, b) => (MEAL_HOURS[a.id] ?? 12) - (MEAL_HOURS[b.id] ?? 12));
 
+  const orderDate = useMemo(() => {
+    const d = addDays(today, 2);
+    return new Intl.DateTimeFormat('pl-PL', { weekday: 'long', day: 'numeric', month: 'long' }).format(d);
+  }, [today]);
+
   const getMealState = (mealId: string, stateMap = mealStates): MealCardState => {
     const s = stateMap[mealId];
     if (s) return s;
@@ -205,36 +210,21 @@ export default function HomeScreen({
     };
 
     return (
-      <div key={meal.id} style={{ display: 'flex', gap: 0 }}>
-        {/* Oś czasu */}
-        <div style={{ width: 32, flexShrink: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', paddingTop: 9 }}>
-          <span style={{ fontSize: 9, fontWeight: 600, color: isCurrent ? 'var(--orange)' : 'var(--text3)', marginBottom: 3, lineHeight: 1, whiteSpace: 'nowrap' }}>
-            {String(mealHour).padStart(2, '0')}:00
-          </span>
-          <div style={{
-            width: isCurrent ? 10 : 7, height: isCurrent ? 10 : 7,
-            borderRadius: '50%',
-            background: isCurrent ? 'var(--orange)' : isPast ? 'var(--green)' : 'var(--bg)',
-            border: isCurrent ? '2px solid var(--orange)' : isPast ? '2px solid var(--green)' : '2px solid var(--border)',
-            flexShrink: 0, zIndex: 1,
-            boxShadow: isCurrent ? '0 0 0 3px var(--olight)' : 'none',
-          }} />
-          {!isLast && (
-            <div style={{ width: 1, flex: 1, minHeight: 12, background: isPast ? 'var(--gmid)' : 'var(--border)', marginTop: 3 }} />
-          )}
-        </div>
-
+      <div key={meal.id} style={{ display: 'flex', gap: 0, marginBottom: isLast ? 0 : 12 }}>
         {/* Karta swipeable */}
         <div
-          style={{ flex: 1, paddingBottom: isLast ? 0 : 6, minWidth: 0, cursor: alt ? 'grab' : 'default' }}
+          style={{ flex: 1, minWidth: 0, cursor: alt ? 'grab' : 'default' }}
           onPointerDown={handlePointerDown}
           onPointerMove={handlePointerMove}
           onPointerUp={handlePointerUp}
           onPointerCancel={handlePointerUp}
         >
-          <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, overflow: 'hidden' }}>
+          <div style={{ background: 'var(--card)', border: isCurrent ? '1.5px solid var(--orange)' : '1px solid var(--border)', borderRadius: 16, overflow: 'hidden', boxShadow: isCurrent ? '0 4px 12px rgba(249, 115, 22, 0.15)' : 'none' }}>
             {/* Nagłówek */}
-            <div style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg)', borderBottom: '1px solid var(--border)' }}>
+            <div 
+              style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'var(--bg)', borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
+              onClick={() => setModal(meal.id, { showDetail: true })}
+            >
               <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                 {isCurrent && <div style={{ width: 5, height: 5, borderRadius: '50%', background: 'var(--orange)', animation: 'pulse 1.5s infinite', flexShrink: 0 }} />}
                 <span style={{ fontSize: 12, fontWeight: 700, color: isCurrent ? 'var(--orange)' : 'var(--text)' }}>{meal.title}</span>
@@ -242,28 +232,28 @@ export default function HomeScreen({
                 {/* Dots nawigacyjne gdy jest alternatywa */}
                 {alt && (
                   <div style={{ display: 'flex', gap: 3, marginLeft: 4 }}>
-                    <div style={{ width: side === 0 ? 12 : 5, height: 5, borderRadius: 3, background: side === 0 ? 'var(--orange)' : 'var(--border)', transition: 'all 0.2s', cursor: 'pointer' }} onClick={() => setSide(0)} />
-                    <div style={{ width: side === 1 ? 12 : 5, height: 5, borderRadius: 3, background: side === 1 ? 'var(--orange)' : 'var(--border)', transition: 'all 0.2s', cursor: 'pointer' }} onClick={() => setSide(1)} />
+                    <div style={{ width: side === 0 ? 12 : 5, height: 5, borderRadius: 3, background: side === 0 ? 'var(--orange)' : 'var(--border)', transition: 'all 0.2s', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setSide(0); }} />
+                    <div style={{ width: side === 1 ? 12 : 5, height: 5, borderRadius: 3, background: side === 1 ? 'var(--orange)' : 'var(--border)', transition: 'all 0.2s', cursor: 'pointer' }} onClick={(e) => { e.stopPropagation(); setSide(1); }} />
                   </div>
                 )}
               </div>
               <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                 {side === 0 && (
                   <>
-                    {state.status === 'eaten' && <button onClick={() => resetStatus(meal.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><span style={{ fontSize: 10, fontWeight: 600, color: 'var(--green)' }}>✓ Zjedzone</span></button>}
-                    {state.status === ('eaten_alternative' as string) && <button onClick={() => resetStatus(meal.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><span style={{ fontSize: 10, fontWeight: 600, color: 'var(--green)' }}>✓ Zjedzone</span></button>}
-                    {state.status === 'not_eaten' && <button onClick={() => resetStatus(meal.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><span style={{ fontSize: 10, fontWeight: 600, color: 'var(--red)' }}>✕ Nie zjedzone</span></button>}
-                    {state.status === 'partial' && <button onClick={() => resetStatus(meal.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><span style={{ fontSize: 10, fontWeight: 600, color: 'var(--orange)' }}>~{state.partialPct ?? 50}%</span></button>}
+                    {state.status === 'eaten' && <button onClick={(e) => { e.stopPropagation(); resetStatus(meal.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><span style={{ fontSize: 10, fontWeight: 600, color: 'var(--green)' }}>✓ Zjedzone</span></button>}
+                    {state.status === ('eaten_alternative' as string) && <button onClick={(e) => { e.stopPropagation(); resetStatus(meal.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><span style={{ fontSize: 10, fontWeight: 600, color: 'var(--green)' }}>✓ Zjedzone</span></button>}
+                    {state.status === 'not_eaten' && <button onClick={(e) => { e.stopPropagation(); resetStatus(meal.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><span style={{ fontSize: 10, fontWeight: 600, color: 'var(--red)' }}>✕ Nie zjedzone</span></button>}
+                    {state.status === 'partial' && <button onClick={(e) => { e.stopPropagation(); resetStatus(meal.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><span style={{ fontSize: 10, fontWeight: 600, color: 'var(--orange)' }}>~{state.partialPct ?? 50}%</span></button>}
                   </>
                 )}
                 {side === 1 && alt && (
                   <>
-                    {altState.status === 'eaten' && <button onClick={() => setAltStates(prev => ({ ...prev, [meal.id]: { status: 'pending', partialPct: 50, showPlate: false } }))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><span style={{ fontSize: 10, fontWeight: 600, color: 'var(--green)' }}>✓ Zjedzone</span></button>}
-                    {altState.status === 'not_eaten' && <button onClick={() => setAltStates(prev => ({ ...prev, [meal.id]: { status: 'pending', partialPct: 50, showPlate: false } }))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><span style={{ fontSize: 10, fontWeight: 600, color: 'var(--red)' }}>✕ Nie zjedzone</span></button>}
-                    {altState.status === 'partial' && <button onClick={() => setAltStates(prev => ({ ...prev, [meal.id]: { status: 'pending', partialPct: 50, showPlate: false } }))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><span style={{ fontSize: 10, fontWeight: 600, color: 'var(--orange)' }}>~{altState.partialPct}%</span></button>}
+                    {altState.status === 'eaten' && <button onClick={(e) => { e.stopPropagation(); setAltStates(prev => ({ ...prev, [meal.id]: { status: 'pending', partialPct: 50, showPlate: false } })); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><span style={{ fontSize: 10, fontWeight: 600, color: 'var(--green)' }}>✓ Zjedzone</span></button>}
+                    {altState.status === 'not_eaten' && <button onClick={(e) => { e.stopPropagation(); setAltStates(prev => ({ ...prev, [meal.id]: { status: 'pending', partialPct: 50, showPlate: false } })); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><span style={{ fontSize: 10, fontWeight: 600, color: 'var(--red)' }}>✕ Nie zjedzone</span></button>}
+                    {altState.status === 'partial' && <button onClick={(e) => { e.stopPropagation(); setAltStates(prev => ({ ...prev, [meal.id]: { status: 'pending', partialPct: 50, showPlate: false } })); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}><span style={{ fontSize: 10, fontWeight: 600, color: 'var(--orange)' }}>~{altState.partialPct}%</span></button>}
                   </>
                 )}
-                <button onClick={() => onToggleFavorite(meal.id)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px' }}>
+                <button onClick={(e) => { e.stopPropagation(); onToggleFavorite(meal.id); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: '1px' }}>
                   <i className={`ti ${favorites.includes(meal.id) ? 'ti-heart-filled' : 'ti-heart'}`} style={{ fontSize: 13, color: favorites.includes(meal.id) ? '#d4537e' : 'var(--text3)' }} />
                 </button>
               </div>
@@ -361,34 +351,26 @@ export default function HomeScreen({
       </div>
 
       <div className="scroll">
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>Dzisiejsze menu</span>
-          <a style={{ fontSize: 12, color: "var(--orange)", cursor: "pointer" }} onClick={() => navigate("plan")}>Plan →</a>
-        </div>
-
-        {/* Aktualny posiłek na górze */}
         {currentMeal && (
-          <>
-            <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5, display: 'flex', alignItems: 'center', gap: 4 }}>
-              <i className="ti ti-clock" style={{ fontSize: 11 }} />
-              Aktualny posiłek
+          <div style={{ marginBottom: 24 }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: "var(--orange)", marginBottom: 10, textTransform: 'uppercase', letterSpacing: '0.04em', display: 'flex', alignItems: 'center', gap: 6 }}>
+              <i className="ti ti-clock-hour-4" style={{ fontSize: 16 }} /> Najbliższy posiłek
             </div>
-            {renderMealRow(currentMeal, false)}
-            <div style={{ height: 10 }} />
-          </>
+            {renderMealRow(currentMeal, true)}
+          </div>
         )}
 
-        {/* Oś czasu — pozostałe posiłki */}
-        <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 4 }}>
-          <i className="ti ti-calendar" style={{ fontSize: 11 }} />
-          Harmonogram dnia
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+          <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)" }}>{currentMeal ? 'Pozostałe posiłki' : 'Dzisiejsze menu'}</span>
+          <a style={{ fontSize: 12, color: "var(--orange)", cursor: "pointer" }} onClick={() => navigate("plan")}>Cały plan →</a>
         </div>
-        <div>
+
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
           {otherMeals.map((meal, idx) => renderMealRow(meal, idx === otherMeals.length - 1))}
         </div>
 
-        <button className="orange-btn" style={{ marginTop: 12 }} onClick={() => navigate("order")}>
-          Zamów posiłki na piątek, 8 maja →
+        <button className="orange-btn" style={{ marginTop: 24, marginBottom: 24 }} onClick={() => navigate("order")}>
+          Zamów posiłki na {orderDate} →
         </button>
       </div>
 
