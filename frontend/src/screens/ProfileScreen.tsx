@@ -15,6 +15,7 @@ const TREATMENT_LABELS: Record<string, string> = {
 interface Props {
   navigate: (s: Screen) => void;
   patient: PatientProfile;
+  streak?: number;
 }
 
 const TREATMENT_SESSIONS = [
@@ -26,7 +27,7 @@ const TREATMENT_SESSIONS = [
   { date: '25 cze', type: 'radio', label: 'Radio', done: false },
 ];
 
-export default function ProfileScreen({ navigate, patient }: Props) {
+export default function ProfileScreen({ navigate, patient, streak = 0 }: Props) {
   const [showTreatment, setShowTreatment] = useState(false);
 
   const targets = getDailyTargets({
@@ -91,6 +92,35 @@ export default function ProfileScreen({ navigate, patient }: Props) {
             </div>
           </div>
         </div>
+
+        {/* Dni aktywności */}
+        {streak > 0 && (
+          <div style={{
+            background: 'var(--card)',
+            border: '1px solid var(--border)',
+            borderRadius: 13, padding: '10px 13px', marginBottom: 10,
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <div style={{
+              width: 36, height: 36, borderRadius: 10,
+              background: 'var(--olight)', border: '1px solid var(--omid)',
+              display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
+            }}>
+              <i className="ti ti-calendar-stats" style={{ fontSize: 18, color: 'var(--orange)' }} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
+                <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--text)' }}>{streak}</span>
+                <span style={{ fontSize: 12, color: 'var(--text2)' }}>
+                  {streak === 1 ? 'dzień z aplikacją' : 'dni z aplikacją'}
+                </span>
+              </div>
+              <p style={{ fontSize: 11, color: 'var(--text3)', margin: 0, lineHeight: 1.4 }}>
+                Im więcej dni, tym lepiej AI dopasowuje posiłki do Twoich potrzeb.
+              </p>
+            </div>
+          </div>
+        )}
 
         <div style={{
           background: 'var(--card)', borderRadius: 15,

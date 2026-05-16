@@ -1,7 +1,7 @@
-import { formatDateLongPL, getToday } from '../utils';
+import { formatDateShortPL, getToday } from '../utils';
 import type { Screen } from '../types';
 
-const dateStr = formatDateLongPL(getToday());
+const dateStr = formatDateShortPL(getToday());
 
 interface Props {
   navigate?: (s: Screen) => void;
@@ -9,9 +9,9 @@ interface Props {
 
 export default function TopbarDate({ navigate }: Props) {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
       <span style={{
-        fontSize: 15,
+        fontSize: 13,
         fontWeight: 600,
         color: 'var(--text2)',
         textTransform: 'capitalize',
@@ -20,6 +20,7 @@ export default function TopbarDate({ navigate }: Props) {
       }}>
         {dateStr}
       </span>
+
       {navigate && (
         <button
           onClick={() => navigate('profile')}

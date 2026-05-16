@@ -6,6 +6,7 @@ import type {
   PatientProfile,
   Meal,
   SymptomHistoryEntry,
+  NotEatenReason,
 } from "./types";
 import { supabase } from "./lib/supabase";
 import { getPatient } from "./services/patients";
@@ -59,6 +60,21 @@ export default function App() {
   const [eatenMap, setEatenMap] = useState<Record<string, EatenStatus>>({});
   const [editingOrder, setEditingOrder] = useState(false);
   const [authChecked, setAuthChecked] = useState(DEV_MODE);
+  const [favorites, setFavorites] = useState<string[]>([]);
+  const [streak] = useState(7); // mock — w produkcji liczyć z bazy
+  const [daysTracked] = useState(9); // mock — w produkcji liczyć z bazy
+  // Gdy pacjent wybierze "złe samopoczucie" → navigate do objawów → wróć z otwartym panelem alternatywy
+  const [pendingAlternativeMealId, setPendingAlternativeMealId] = useState<string | null>(null);
+
+  const handleToggleFavorite = (mealId: string) => {
+    setFavorites((prev) =>
+      prev.includes(mealId) ? prev.filter((id) => id !== mealId) : [...prev, mealId],
+    );
+  };
+
+  const handleNotEatenReason = (_mealId: string, _reason: NotEatenReason) => {
+    // Powód zapisany — alternatywa obsługiwana bezpośrednio w MealFeedbackModal
+  };
 
   useEffect(() => {
     if (DEV_MODE) return;
@@ -108,6 +124,9 @@ export default function App() {
 
   const navigate = (s: Screen) => {
     if (s !== 'order') setEditingOrder(false);
+    // Gdy wracamy do home z add-sym i mamy pending alternative — zostaw stan
+    // W innych przypadkach czyść
+    if (s !== 'home') setPendingAlternativeMealId(null);
     setScreen(s);
   };
 
@@ -162,6 +181,12 @@ export default function App() {
               eatenMap={eatenMap}
               setEatenMap={setEatenMap}
               patient={patient}
+              favorites={favorites}
+              onToggleFavorite={handleToggleFavorite}
+              streak={streak}
+              onNotEatenReason={handleNotEatenReason}
+              pendingAlternativeMealId={pendingAlternativeMealId}
+              onAlternativeHandled={() => setPendingAlternativeMealId(null)}
             />
           )}
           {screen === "plan" && (
@@ -170,6 +195,7 @@ export default function App() {
               choices={choices}
               orderMeals={orderMeals}
               symptomHistory={symptomHistory}
+              streak={streak}
             />
           )}
           {screen === "order" && patient && (
@@ -183,6 +209,7 @@ export default function App() {
               symptomHistory={symptomHistory}
               eatenMap={eatenMap}
               editMode={editingOrder}
+              streak={streak}
             />
           )}
           {screen === "add-sym" && (
@@ -192,10 +219,11 @@ export default function App() {
               setSymptoms={setSymptoms}
               symptomHistory={symptomHistory}
               setSymptomHistory={setSymptomHistory}
+              streak={streak}
             />
           )}
           {screen === "profile" && patient && (
-            <ProfileScreen navigate={navigate} patient={patient} />
+            <ProfileScreen navigate={navigate} patient={patient} streak={streak} />
           )}
           {screen === "allergens" && patient && (
             <AllergensScreen

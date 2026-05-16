@@ -67,7 +67,7 @@ export interface PatientProfile {
 
 export type EatenStatus = 'none' | 'full';
 
-export type MealStatus = 'pending' | 'eaten' | 'partial' | 'not_eaten';
+export type MealStatus = 'pending' | 'eaten' | 'partial' | 'not_eaten' | 'eaten_alternative';
 
 export interface MealCardState {
   status: MealStatus;
@@ -80,8 +80,17 @@ export type Screen =
   | 'confirm' | 'allergens' | 'nutrition' | 'chat';
 
 export type SymptomKey =
-  | 'nausea' | 'taste' | 'diarrhea' | 'mouth' | 'const'
+  | 'nausea' | 'taste' | 'taste_change' | 'diarrhea' | 'mouth' | 'const'
   | 'fatigue' | 'appetite' | 'dryness' | 'metal';
+
+export type NotEatenReason = 'no_appetite' | 'bad_taste' | 'bad_feeling';
+
+export interface MealFeedback {
+  mealId: string;
+  type: 'eaten' | 'not_eaten';
+  reason?: NotEatenReason;
+  date: string;
+}
 
 export interface SymptomEntry {
   key: string;

@@ -1,16 +1,12 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo, useLayoutEffect } from "react";
 import Navbar from "../components/Navbar";
-import type { Screen, Meal, MealOption, PatientProfile, SymptomHistoryEntry, EatenStatus, Tag } from "../types";
+import type { Screen, Meal, PatientProfile, SymptomHistoryEntry, EatenStatus } from "../types";
 import { meals as fallbackMeals } from "../data";
-import {
-  getOption,
-  getOrderableDate,
-  formatDateForAPI,
-  formatDateLongPL,
-} from "../utils";
+import { getOption, getOrderableDate, formatDateForAPI, formatDateLongPL } from "../utils";
 import { fetchMenuForDateCached, fetchAiRecommendation } from "../api";
 import TopbarDate from "../components/TopbarDate";
 import { upsertMealLog, getMealLogs } from "../services/mealLogs";
+import MealDetailModal from "../components/MealDetailModal";
 
 interface Props {
   navigate: (s: Screen) => void;
@@ -22,300 +18,245 @@ interface Props {
   symptomHistory: SymptomHistoryEntry[];
   eatenMap: Record<string, EatenStatus>;
   editMode: boolean;
+  streak?: number;
 }
+
+// ── Swipeable meal slot ────────────────────────────────────────────────────────
 
 interface SlotProps {
   meal: Meal;
-  optionIdx: number;
-  onFlip: (dir: 1 | -1) => void;
+  selectedIdx: number;
+  onSelect: (idx: number) => void;
+  aiIdx?: number;
   aiReason?: string;
-  aiChoice?: number;
+  onShowDetail: (idx: number) => void;
 }
 
-
-interface CardContentProps {
-  opt: MealOption;
-  flipped: boolean;
-  aiChoice?: number;
-  isAiSelected: boolean;
-  aiReason?: string;
-}
-
-function CardContent({ opt, flipped, aiChoice, isAiSelected, aiReason }: CardContentProps) {
-  return (
-    <div className={`card-inner${flipped ? " flipped" : ""}`}>
-      {/* PRZÓD */}
-      <div className="card-face card-front" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <div className="card-swipe-header">
-          <i className="ti ti-chevron-left" />
-          <span>Przesuń, by zmienić</span>
-          <i className="ti ti-chevron-right" />
-        </div>
-        
-        <div style={{ flexGrow: 1, padding: "16px 18px" }}>
-          {aiChoice !== undefined && (
-            <div className={`card-label ${isAiSelected ? "ai-lbl" : "alt-lbl"}`} style={{ marginBottom: 10 }}>
-              <i className={`ti ${isAiSelected ? "ti-brain" : "ti-arrows-exchange"}`} />
-              <span>{isAiSelected ? "Wybór AI" : "Alternatywa"}</span>
-            </div>
-          )}
-          <div className="card-name">{opt.name}</div>
-          <div style={{ display: "flex", gap: 5, flexWrap: "wrap", alignItems: "center", marginTop: 8 }}>
-            <span className="tag b">{opt.protein}g białka</span>
-            {opt.allergensText && (
-              <span className="tag a" style={{ display: "flex", alignItems: "center", gap: 3 }}>
-                <i className="ti ti-alert-triangle" style={{ fontSize: 9 }} />
-                {opt.allergensText}
-              </span>
-            )}
-          </div>
-        </div>
-
-        <div className="card-flip-footer">
-          <i className="ti ti-rotate-clockwise" />
-          <span>dotknij po szczegóły</span>
-        </div>
-      </div>
-
-      {/* TYŁ */}
-      <div className="card-face card-back" style={{ display: "flex", flexDirection: "column", height: "100%" }}>
-        <div style={{ flexGrow: 1, padding: "16px 18px" }}>
-          {aiChoice !== undefined && (
-            <>
-              <div className="card-back-hdr">
-                <i className="ti ti-brain" />
-                <span>Uzasadnienie AI</span>
-              </div>
-              <div className={`card-why ${isAiSelected ? "green" : "orange"}`}>
-                {isAiSelected ? aiReason : "AI rekomendowało inną opcję dla Twoich objawów. To jest opcja alternatywna."}
-              </div>
-            </>
-          )}
-          <div className="card-tags">
-            {opt.tags.map((tag: Tag) => (
-              <span key={tag.t} className={`tag ${tag.c}`}>
-                {tag.t}
-              </span>
-            ))}
-          </div>
-          <span className="card-kcal">
-            {opt.kcal} kcal · {opt.protein}g B · {opt.carbs}g W · {opt.fat}g T
-          </span>
-        </div>
-        
-        <div className="card-flip-footer">
-          <i className="ti ti-arrow-back-up" />
-          <span>wróć do dania</span>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function MealSlot({ meal, optionIdx, onFlip, aiReason, aiChoice }: SlotProps) {
-  const opt = getOption(meal, optionIdx);
-  const nextIdx = optionIdx === 0 ? 1 : 0;
-  const nextOpt = getOption(meal, nextIdx);
-
-  const isAiSelected = aiChoice !== undefined && optionIdx === aiChoice;
-  const isAiAlternative = aiChoice !== undefined && optionIdx !== aiChoice;
-
-  const isNextAiSelected = aiChoice !== undefined && nextIdx === aiChoice;
-  const isNextAiAlternative = aiChoice !== undefined && nextIdx !== aiChoice;
-  
+function MealSlot({ meal, selectedIdx, onSelect, aiIdx, aiReason, onShowDetail }: SlotProps) {
+  const [currentView, setCurrentView] = useState(selectedIdx);
+  const [flipped, setFlipped] = useState(false);
+  const [cardHeight, setCardHeight] = useState<number | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
-  const nextCardRef = useRef<HTMLDivElement>(null);
+  const frontRef = useRef<HTMLDivElement>(null);
+  const backRef = useRef<HTMLDivElement>(null);
   const startX = useRef(0);
-  const startY = useRef(0);
   const dx = useRef(0);
   const dragging = useRef(false);
-  const dirLocked = useRef<"h" | "v" | null>(null);
-  const wasVertical = useRef(false);
-  const [animDir, setAnimDir] = useState<0 | 1 | -1>(0);
-  const [flipped, setFlipped] = useState(false);
+  const dirLocked = useRef<'h' | 'v' | null>(null);
+  const startY = useRef(0);
+  const didDrag = useRef(false);
 
-  const triggerFlip = useCallback(
-    (dir: 1 | -1) => {
-      const card = cardRef.current;
-      const nextCard = nextCardRef.current;
-      if (!card || animDir !== 0) return;
-      setAnimDir(dir);
-      setFlipped(false);
-      card.style.transition = "transform .22s ease, opacity .22s ease, box-shadow .22s ease";
-      card.style.transform = dir > 0 ? "translateX(-110%)" : "translateX(110%)";
-      card.style.opacity = "0";
-      card.style.boxShadow = "";
-      if (nextCard) {
-        nextCard.style.transition = "transform .22s ease, opacity .22s ease, filter .22s ease";
-        nextCard.style.transform = "scale(1)";
-        nextCard.style.opacity = "1";
-        nextCard.style.filter = "blur(0px)";
-      }
-      setTimeout(() => {
-        onFlip(dir);
-        setAnimDir(0);
-        requestAnimationFrame(() => {
-          if (card) {
-            card.style.transition = "none";
-            card.style.transform = "translateX(0)";
-            card.style.opacity = "1";
-            card.style.boxShadow = "";
-          }
-          if (nextCard) {
-            nextCard.style.transition = "none";
-            nextCard.style.transform = "scale(0.95)";
-            nextCard.style.opacity = "0.6";
-            nextCard.style.filter = "blur(4px)";
-          }
-        });
-      }, 220);
-    },
-    [animDir, onFlip],
-  );
+  useEffect(() => { setCurrentView(selectedIdx); setFlipped(false); }, [selectedIdx]);
 
+  const opt = getOption(meal, currentView);
+  const isAiRec = aiIdx !== undefined && currentView === aiIdx;
+  const isAiAlt = aiIdx !== undefined && currentView !== aiIdx;
+  const totalOpts = meal.options.length;
+
+  const syncCardHeight = useCallback(() => {
+    const frontHeight = frontRef.current?.offsetHeight ?? 0;
+    const backHeight = backRef.current?.offsetHeight ?? 0;
+    const nextHeight = flipped ? Math.max(frontHeight, backHeight) : frontHeight;
+    if (nextHeight > 0) setCardHeight((prev) => (prev === nextHeight ? prev : nextHeight));
+  }, [flipped]);
+
+  useLayoutEffect(() => {
+    syncCardHeight();
+  }, [syncCardHeight, currentView, aiReason, aiIdx]);
+
+  useEffect(() => {
+    if (typeof ResizeObserver === 'undefined') return;
+    if (!frontRef.current || !backRef.current) return;
+    const observer = new ResizeObserver(() => syncCardHeight());
+    observer.observe(frontRef.current);
+    observer.observe(backRef.current);
+    return () => observer.disconnect();
+  }, [syncCardHeight]);
+
+  const swipeTo = useCallback((idx: number) => {
+    const clamped = Math.max(0, Math.min(totalOpts - 1, idx));
+    setCurrentView(clamped);
+    onSelect(clamped);
+    setFlipped(false);
+  }, [totalOpts, onSelect]);
   const onPointerDown = (e: React.PointerEvent) => {
     dragging.current = true;
+    didDrag.current = false;
     startX.current = e.clientX;
     startY.current = e.clientY;
     dx.current = 0;
     dirLocked.current = null;
-    wasVertical.current = false;
-    if (cardRef.current) cardRef.current.style.transition = "none";
-    if (nextCardRef.current) nextCardRef.current.style.transition = "none";
+    if (cardRef.current) cardRef.current.style.transition = 'none';
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (!dragging.current) return;
-    let deltaX = e.clientX - startX.current;
+    const deltaX = e.clientX - startX.current;
     const deltaY = e.clientY - startY.current;
-    if (dirLocked.current === null) {
+    if (!dirLocked.current) {
       if (Math.abs(deltaX) < 5 && Math.abs(deltaY) < 5) return;
-      dirLocked.current = Math.abs(deltaX) >= Math.abs(deltaY) ? "h" : "v";
+      dirLocked.current = Math.abs(deltaX) >= Math.abs(deltaY) ? 'h' : 'v';
     }
-    if (dirLocked.current === "v") {
-      wasVertical.current = true;
-      return;
-    }
+    if (dirLocked.current === 'v') return;
     e.stopPropagation();
-
-    if (optionIdx === 0 && deltaX > 0) {
-      deltaX = deltaX * 0.15;
-    } else if (optionIdx === 1 && deltaX < 0) {
-      deltaX = deltaX * 0.15;
-    }
-
+    if (Math.abs(deltaX) > 8) didDrag.current = true;
     dx.current = deltaX;
-    if (cardRef.current) {
-      cardRef.current.style.transform = `translateX(${dx.current}px) rotate(${dx.current * 0.025}deg)`;
-      const shadowProgress = Math.min(Math.abs(dx.current) / 100, 1);
-      cardRef.current.style.boxShadow = `0px ${8 + 12 * shadowProgress}px ${16 + 24 * shadowProgress}px rgba(0,0,0,${0.05 + 0.1 * shadowProgress})`;
-    }
-    if (nextCardRef.current) {
-      const isValidSwipe = (optionIdx === 0 && dx.current < 0) || (optionIdx === 1 && dx.current > 0);
-      const progress = isValidSwipe ? Math.min(Math.abs(dx.current) / 150, 1) : 0;
-      nextCardRef.current.style.transform = `scale(${0.95 + progress * 0.05})`;
-      nextCardRef.current.style.opacity = `${0.6 + progress * 0.4}`;
-      nextCardRef.current.style.filter = `blur(${4 - progress * 4}px)`;
-    }
+    if (cardRef.current) cardRef.current.style.transform = `translateX(${dx.current * 0.3}px)`;
   };
 
   const onPointerUp = () => {
     if (!dragging.current) return;
     dragging.current = false;
-    dirLocked.current = null;
-    if (dx.current < -45 && optionIdx === 0) {
-      triggerFlip(1);
-    } else if (dx.current > 45 && optionIdx === 1) {
-      triggerFlip(-1);
-    } else {
-      if (cardRef.current) {
-        cardRef.current.style.transition = "transform .18s ease, box-shadow .18s ease";
-        cardRef.current.style.transform = "translateX(0) rotate(0deg)";
-        cardRef.current.style.boxShadow = "";
-      }
-      if (nextCardRef.current) {
-        nextCardRef.current.style.transition = "transform .18s ease, opacity .18s ease, filter .18s ease";
-        nextCardRef.current.style.transform = "scale(0.95)";
-        nextCardRef.current.style.opacity = "0.6";
-        nextCardRef.current.style.filter = "blur(4px)";
-      }
-      if (Math.abs(dx.current) < 8 && !wasVertical.current) {
-        setFlipped((f) => !f);
-      }
+    if (cardRef.current) {
+      cardRef.current.style.transition = 'transform 0.2s ease';
+      cardRef.current.style.transform = 'translateX(0)';
+    }
+    if (dx.current < -50 && currentView < totalOpts - 1) swipeTo(currentView + 1);
+    else if (dx.current > 50 && currentView > 0) swipeTo(currentView - 1);
+    else if (!didDrag.current) {
+      // tap — flip karta
+      setFlipped(f => !f);
     }
     dx.current = 0;
   };
 
+  const cardBg = '#fff';
+  const cardBorderColor = isAiRec ? 'var(--gmid)' :
+                          isAiAlt ? 'var(--omid)' : 'var(--border)';
+
   return (
-    <div className="meal-slot">
-      <div className="slot-head">
-        <div className="slot-info">
-          <div className="slot-title">{meal.title}</div>
-          <div className="slot-time">{meal.time}</div>
+    <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 8, overflow: 'hidden' }}>
+      {/* Nagłówek */}
+      <div style={{ padding: '9px 14px 8px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid var(--border)', background: 'var(--bg)' }}>
+        <div>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{meal.title}</span>
+          <span style={{ fontSize: 11, color: 'var(--text3)', marginLeft: 6 }}>{meal.time}</span>
         </div>
-        {aiChoice !== undefined && (
-          <div className={`slot-status ${isAiSelected ? "done" : "alt"}`}>
-            <i className={`ti ${isAiSelected ? "ti-check" : "ti-arrows-exchange"}`} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {aiIdx !== undefined && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, background: isAiRec ? 'var(--glight)' : 'var(--olight)', border: `1px solid ${isAiRec ? 'var(--gmid)' : 'var(--omid)'}`, borderRadius: 8, padding: '2px 7px' }}>
+              <i className="ti ti-brain" style={{ fontSize: 10, color: isAiRec ? 'var(--green)' : 'var(--orange)' }} />
+              <span style={{ fontSize: 10, fontWeight: 600, color: isAiRec ? 'var(--green)' : 'var(--orange)' }}>
+                {isAiRec ? 'Wybór AI' : 'Alternatywa'}
+              </span>
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 4 }}>
+            {meal.options.map((_, i) => (
+              <div key={i} style={{
+                width: i === currentView ? 14 : 6, height: 6, borderRadius: 3,
+                background: i === currentView ? (aiIdx !== undefined && i === aiIdx ? 'var(--green)' : 'var(--orange)') : 'var(--border)',
+                transition: 'all 0.2s', cursor: 'pointer',
+              }} onClick={() => swipeTo(i)} />
+            ))}
           </div>
-        )}
+        </div>
       </div>
 
-      <div className="card-window" style={{ position: "relative" }}>
-        <div
-          ref={nextCardRef}
-          className={`swipe-card ${isNextAiSelected ? "rec-style" : isNextAiAlternative ? "alt-style" : ""}`}
-          style={{
-            position: "absolute",
-            top: 0,
-            left: 0,
-            width: "100%",
-            height: "100%",
-            zIndex: 0,
-            transform: "scale(0.95)",
-            opacity: 0.6,
-            filter: "blur(4px)",
-            ...(aiChoice === undefined ? { background: '#fff', border: '1px solid var(--border)' } : {})
-          }}
-        >
-          <CardContent
-            opt={nextOpt}
-            flipped={false}
-            aiChoice={aiChoice}
-            isAiSelected={isNextAiSelected}
-            aiReason={aiReason}
-          />
-        </div>
-
+      {/* Flip card */}
+      <div style={{ perspective: '1000px', height: cardHeight ?? undefined, transition: 'height 0.22s ease' }}>
         <div
           ref={cardRef}
-          className={`swipe-card ${isAiSelected ? "rec-style" : isAiAlternative ? "alt-style" : ""}`}
           style={{
-            position: "relative",
-            zIndex: 1,
-            ...(aiChoice === undefined ? { background: '#fff', border: '1px solid var(--border)' } : {})
+            position: 'relative',
+            height: '100%',
+            transformStyle: 'preserve-3d',
+            transition: 'transform 0.45s cubic-bezier(0.4,0,0.2,1)',
+            transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+            cursor: 'pointer',
           }}
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
           onPointerUp={onPointerUp}
           onPointerCancel={onPointerUp}
         >
-          <CardContent
-            opt={opt}
-            flipped={flipped}
-            aiChoice={aiChoice}
-            isAiSelected={isAiSelected}
-            aiReason={aiReason}
-          />
-        </div>
-      </div>
+          {/* PRZÓD */}
+          <div
+            ref={frontRef}
+            style={{
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            padding: '12px 14px',
+            background: cardBg,
+            borderStyle: 'solid',
+            borderColor: cardBorderColor,
+            borderWidth: '0 1px 1px 1px',
+            borderRadius: '0 0 16px 16px',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.35, marginBottom: 6 }}>{opt.name}</div>
+                <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                  <span className="tag b">{opt.protein}g białka</span>
+                  <span className="tag">{opt.kcal} kcal</span>
+                  {opt.tags?.filter(t => t.c === 'g').slice(0, 2).map(t => (
+                    <span key={t.t} className="tag g">{t.t}</span>
+                  ))}
+                  {opt.allergensText && (
+                    <span className="tag a" style={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                      <i className="ti ti-alert-triangle" style={{ fontSize: 8 }} />alergeny
+                    </span>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={(e) => { e.stopPropagation(); onShowDetail(currentView); }}
+                onPointerDown={(e) => e.stopPropagation()}
+                onPointerUp={(e) => e.stopPropagation()}
+                style={{ background: 'var(--bg)', border: '1px solid var(--border)', borderRadius: 8, width: 30, height: 30, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flexShrink: 0 }}
+              >
+                <i className="ti ti-info-circle" style={{ fontSize: 13, color: 'var(--text3)' }} />
+              </button>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 4, marginTop: 8, opacity: 0.4 }}>
+              <i className="ti ti-arrow-left" style={{ fontSize: 9, color: 'var(--text3)' }} />
+              <span style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                {aiIdx !== undefined ? 'dotknij po uzasadnienie AI · przesuń by zmienić' : 'przesuń, by zmienić opcję'}
+              </span>
+              <i className="ti ti-arrow-right" style={{ fontSize: 9, color: 'var(--text3)' }} />
+            </div>
+          </div>
 
-      <div className="swipe-dots">
-        <div className={`sdot ${optionIdx === 0 ? (aiChoice !== undefined ? (aiChoice === 0 ? "ai-active" : "alt-active") : "active") : ""}`} style={optionIdx === 0 && aiChoice !== undefined && aiChoice === 0 ? {background: 'var(--orange)', transform: 'scale(1.2)'} : {}} />
-        <div className={`sdot ${optionIdx === 1 ? (aiChoice !== undefined ? (aiChoice === 1 ? "ai-active" : "alt-active") : "active") : ""}`} style={optionIdx === 1 && aiChoice !== undefined && aiChoice === 1 ? {background: 'var(--orange)', transform: 'scale(1.2)'} : {}} />
+          {/* TYŁ — uzasadnienie AI, auto-height */}
+          <div
+            ref={backRef}
+            style={{
+            position: 'absolute', top: 0, left: 0, right: 0,
+            backfaceVisibility: 'hidden',
+            WebkitBackfaceVisibility: 'hidden',
+            transform: 'rotateY(180deg)',
+            padding: '14px',
+            background: '#fff',
+            borderStyle: 'solid',
+            borderColor: isAiRec ? 'var(--gmid)' : 'var(--omid)',
+            borderWidth: '0 1px 1px 1px',
+            borderRadius: '0 0 16px 16px',
+            minHeight: '100%',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
+              <i className="ti ti-brain" style={{ fontSize: 13, color: isAiRec ? 'var(--green)' : 'var(--orange)' }} />
+              <span style={{ fontSize: 10, fontWeight: 700, color: isAiRec ? 'var(--green)' : 'var(--orange)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                Uzasadnienie AI
+              </span>
+            </div>
+            <p style={{ fontSize: 12, color: 'var(--text)', lineHeight: 1.6, margin: '0 0 12px' }}>
+              {aiReason
+                ? (isAiRec ? aiReason : 'AI rekomendowało inną opcję dla Twoich objawów. Przesuń w lewo, aby zobaczyć rekomendację AI.')
+                : 'Brak uzasadnienia AI dla tego dania.'}
+            </p>
+            <div style={{ display: 'flex', justifyContent: 'center', opacity: 0.4 }}>
+              <span style={{ fontSize: 9, color: 'var(--text3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}>dotknij, by wrócić</span>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
 }
+
+// ── Main screen ────────────────────────────────────────────────────────────────
 
 export default function OrderScreen({
   navigate,
@@ -335,19 +276,14 @@ export default function OrderScreen({
   const [aiReasons, setAiReasons] = useState<Record<string, string>>({});
   const [aiChoices, setAiChoices] = useState<Record<string, number>>({});
   const [globalAiReason, setGlobalAiReason] = useState<string | null>(null);
+  const [detailMeal, setDetailMeal] = useState<{ meal: Meal; optionIdx: number } | null>(null);
 
   const orderDate = useMemo(() => getOrderableDate(), []);
   const orderDateStr = useMemo(() => formatDateForAPI(orderDate), [orderDate]);
-  const orderDateDisplay = useMemo(
-    () => formatDateLongPL(orderDate),
-    [orderDate],
-  );
+  const orderDateDisplay = useMemo(() => formatDateLongPL(orderDate), [orderDate]);
 
   useEffect(() => {
-    Promise.all([
-      fetchMenuForDateCached(orderDateStr),
-      getMealLogs(orderDateStr),
-    ]).then(([meals, logs]) => {
+    Promise.all([fetchMenuForDateCached(orderDateStr), getMealLogs(orderDateStr)]).then(([meals, logs]) => {
       setApiMeals(meals);
       setOrderMeals(meals);
       if (logs.length > 0 && meals) {
@@ -360,43 +296,26 @@ export default function OrderScreen({
       }
       setLoading(false);
     });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [orderDateStr]);
 
   const activeMeals = apiMeals ?? fallbackMeals;
 
-  const flip = (mealId: string, dir: 1 | -1) => {
-    setChoices({ ...choices, [mealId]: (choices[mealId] ?? 0) + dir });
-  };
-
   const applyAiRecommendation = async () => {
     setIsAiLoading(true);
-    // Strip biasing fields so the AI makes an independent clinical decision
     const cleanedMeals = activeMeals.map(meal => ({
       ...meal,
-      options: meal.options.map(({ isRec: _isRec, score: _score, scoreReason: _scoreReason, why: _why, ...rest }) => rest),
+      options: meal.options.map(({ isRec: _r, score: _s, scoreReason: _sr, why: _w, ...rest }) => rest),
     }));
-
-    const payload = {
-      patient,
-      symptoms,
-      symptomHistory,
-      eatenMap,
-      activeMeals: cleanedMeals,
-    };
-    
-    const result = await fetchAiRecommendation(payload);
+    const result = await fetchAiRecommendation({ patient, symptoms, symptomHistory, eatenMap, activeMeals: cleanedMeals });
     setIsAiLoading(false);
-    
     if (result) {
       const newChoices: Record<string, number> = {};
       const newReasons: Record<string, string> = {};
-      
       for (const [mealId, data] of Object.entries(result.choices || {})) {
         newChoices[mealId] = data.choice;
         newReasons[mealId] = data.reason;
       }
-      
       setChoices({ ...choices, ...newChoices });
       setAiChoices(newChoices);
       setAiReasons(newReasons);
@@ -412,118 +331,60 @@ export default function OrderScreen({
       activeMeals.map((meal) => {
         const optIdx = choices[meal.id] ?? 0;
         const opt = getOption(meal, optIdx);
-        return upsertMealLog({
-          date: orderDateStr,
-          meal_slot: meal.title,
-          meal_name: opt.name,
-          option_index: optIdx,
-          status: 'pending',
-        });
+        return upsertMealLog({ date: orderDateStr, meal_slot: meal.title, meal_name: opt.name, option_index: optIdx, status: 'pending' });
       }),
     );
     navigate("confirm");
   };
 
-  const totalProtein = activeMeals.reduce(
-    (sum, m) => sum + getOption(m, choices[m.id] ?? 0).protein,
-    0,
-  );
-  const totalKcal = activeMeals.reduce(
-    (sum, m) => sum + getOption(m, choices[m.id] ?? 0).kcal,
-    0,
-  );
+  const totalProtein = activeMeals.reduce((sum, m) => sum + getOption(m, choices[m.id] ?? 0).protein, 0);
+  const totalKcal = activeMeals.reduce((sum, m) => sum + getOption(m, choices[m.id] ?? 0).kcal, 0);
 
   return (
     <div className="screen active">
       <div className="topbar">
-        <div><h1>Zamówienie</h1></div>
+        <div><h1>Zamówienie</h1><p>{orderDateDisplay}</p></div>
         <TopbarDate navigate={navigate} />
       </div>
 
-      {globalAiReason && (
-        <div className="pred-banner">
-          <div className="pb-top">
-            <i className="ti ti-brain" />
-            <span style={{ textTransform: "capitalize" }}>
-              Podsumowanie AI · {orderDateDisplay}
-            </span>
+      {/* AI Banner */}
+      <div style={{ padding: '0 16px 8px', flexShrink: 0 }}>
+        <button
+          style={{
+            width: '100%', padding: '10px 14px',
+            background: aiApplied ? 'var(--glight)' : 'var(--olight)',
+            border: `1.5px solid ${aiApplied ? 'var(--gmid)' : 'var(--omid)'}`,
+            borderRadius: 14, cursor: 'pointer',
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}
+          onClick={applyAiRecommendation}
+          disabled={isAiLoading}
+        >
+          <div style={{ width: 32, height: 32, borderRadius: '50%', background: aiApplied ? 'var(--green)' : 'var(--orange)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <i className={`ti ${isAiLoading ? 'ti-loader-2 cam-spin' : aiApplied ? 'ti-check' : 'ti-brain'}`} style={{ fontSize: 15, color: '#fff' }} />
           </div>
-          <p style={{ marginBottom: 0 }}>
-            {globalAiReason}
-          </p>
-        </div>
-      )}
+          <div style={{ flex: 1, textAlign: 'left' }}>
+            <div style={{ fontSize: 13, fontWeight: 700, color: aiApplied ? 'var(--green)' : 'var(--orange)' }}>
+              {isAiLoading ? 'Analizuję Twoje objawy…' : aiApplied ? 'Rekomendacja AI zastosowana' : 'Dopasuj menu do moich objawów'}
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text2)', marginTop: 1 }}>
+              {aiApplied ? 'Dotknij kartę dania, by zobaczyć uzasadnienie AI' : 'AI przeanalizuje objawy i wybierze najlepsze dania'}
+            </div>
+          </div>
+          {!aiApplied && !isAiLoading && <i className="ti ti-chevron-right" style={{ fontSize: 14, color: 'var(--orange)', flexShrink: 0 }} />}
+        </button>
+      </div>
 
-      <div className="scroll">
-        <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
-          <button
-            className="orange-btn"
-            style={{ flex: 1, width: "auto", margin: 0, padding: "11px 0" }}
-            onClick={handlePlaceOrder}
-          >
-            {editMode ? "Zapisz zmiany" : "Złóż zamówienie"}
-          </button>
-          <button
-            style={{
-              flex: 1,
-              margin: 0,
-              padding: "11px 0",
-              background: aiApplied ? "var(--glight)" : "var(--olight)",
-              border: `1.5px solid ${aiApplied ? "var(--green)" : "var(--omid)"}`,
-              borderRadius: 14,
-              color: aiApplied ? "var(--green)" : "var(--orange)",
-              fontSize: 12,
-              fontWeight: 700,
-              cursor: "pointer",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              gap: 5,
-            }}
-            onClick={applyAiRecommendation}
-            disabled={isAiLoading}
-          >
-            <i
-              className={`ti ${isAiLoading ? "ti-loader-2 cam-spin" : aiApplied ? "ti-check" : "ti-brain"}`}
-              style={{ fontSize: 14 }}
-            />
-            {isAiLoading ? "Pobieranie..." : aiApplied ? "Zastosowano" : "Rekomendacja AI"}
-          </button>
-        </div>
-
+      <div className="scroll" style={{ paddingBottom: 90 }}>
         {loading ? (
-          <div
-            style={{
-              display: "flex",
-              flexDirection: "column",
-              alignItems: "center",
-              justifyContent: "center",
-              padding: "40px 0",
-              gap: 10,
-            }}
-          >
-            <i
-              className="ti ti-loader-2 cam-spin"
-              style={{ fontSize: 28, color: "var(--orange)" }}
-            />
-            <p style={{ fontSize: 12, color: "var(--text3)", margin: 0 }}>
-              Pobieranie menu na {orderDateDisplay}…
-            </p>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '40px 0', gap: 10 }}>
+            <i className="ti ti-loader-2 cam-spin" style={{ fontSize: 28, color: 'var(--orange)' }} />
+            <p style={{ fontSize: 12, color: 'var(--text3)', margin: 0 }}>Pobieranie menu…</p>
           </div>
         ) : (
           <>
             {apiMeals === null && (
-              <div
-                style={{
-                  background: "var(--alight)",
-                  border: "1px solid var(--amber)",
-                  borderRadius: 11,
-                  padding: "8px 12px",
-                  marginBottom: 12,
-                  fontSize: 11,
-                  color: "var(--text2)",
-                }}
-              >
+              <div style={{ background: 'var(--alight)', border: '1px solid var(--amber)', borderRadius: 11, padding: '8px 12px', marginBottom: 10, fontSize: 11, color: 'var(--text2)' }}>
                 <i className="ti ti-wifi-off" style={{ marginRight: 5 }} />
                 Brak połączenia z API — wyświetlam dane lokalne.
               </div>
@@ -533,67 +394,77 @@ export default function OrderScreen({
               <MealSlot
                 key={meal.id}
                 meal={meal}
-                optionIdx={choices[meal.id] ?? 0}
-                onFlip={(dir) => flip(meal.id, dir)}
+                selectedIdx={choices[meal.id] ?? 0}
+                onSelect={(idx) => setChoices({ ...choices, [meal.id]: idx })}
+                aiIdx={aiChoices[meal.id]}
                 aiReason={aiReasons[meal.id]}
-                aiChoice={aiChoices[meal.id]}
+                onShowDetail={(idx) => setDetailMeal({ meal, optionIdx: idx })}
               />
             ))}
 
-            <div className="summary-card">
-              <p
-                style={{
-                  fontSize: 13,
-                  fontWeight: 600,
-                  color: "var(--text)",
-                  marginBottom: 7,
-                }}
-              >
-                Podsumowanie
-              </p>
+            {/* Podsumowanie */}
+            <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 14, padding: '12px 14px', marginBottom: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text)', marginBottom: 10 }}>Podsumowanie zamówienia</div>
               {activeMeals.map((meal) => {
                 const opt = getOption(meal, choices[meal.id] ?? 0);
+                const isAiMatch = aiChoices[meal.id] !== undefined && aiChoices[meal.id] === (choices[meal.id] ?? 0);
+                const isAiMismatch = aiChoices[meal.id] !== undefined && aiChoices[meal.id] !== (choices[meal.id] ?? 0);
                 return (
-                  <div key={meal.id} className="sum-row">
-                    <span className="sum-meal">{meal.title}</span>
-                    <div
-                      style={{ display: "flex", alignItems: "center", gap: 6 }}
-                    >
-                      <span
-                        className={`sum-val ${aiChoices[meal.id] !== undefined ? (aiChoices[meal.id] === choices[meal.id] ? "green" : "orange") : ""}`}
-                      >
+                  <div key={meal.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '5px 0', borderBottom: '1px solid var(--border)' }}>
+                    <span style={{ fontSize: 11, color: 'var(--text2)', flexShrink: 0, width: 88 }}>{meal.title}</span>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, flex: 1, justifyContent: 'flex-end', paddingLeft: 8, minWidth: 0 }}>
+                      {isAiMatch && <i className="ti ti-brain" style={{ fontSize: 10, color: 'var(--green)', flexShrink: 0 }} />}
+                      {isAiMismatch && <i className="ti ti-arrows-exchange" style={{ fontSize: 10, color: 'var(--orange)', flexShrink: 0 }} />}
+                      <span style={{ fontSize: 11, fontWeight: 600, color: isAiMatch ? 'var(--green)' : isAiMismatch ? 'var(--orange)' : 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {opt.name}
                       </span>
                     </div>
                   </div>
                 );
               })}
+              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
+                <div style={{ flex: 1, background: 'rgba(59,130,246,0.08)', border: '1px solid rgba(59,130,246,0.2)', borderRadius: 10, padding: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: '#3b82f6' }}>{totalProtein}g</div>
+                  <div style={{ fontSize: 10, color: 'var(--text2)' }}>białko</div>
+                </div>
+                <div style={{ flex: 1, background: 'var(--olight)', border: '1px solid var(--omid)', borderRadius: 10, padding: '8px', textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--orange)' }}>{totalKcal}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text2)' }}>kcal</div>
+                </div>
+              </div>
+              {Object.keys(aiChoices).length > 0 && (
+                <div style={{ display: 'flex', gap: 12, marginTop: 8, paddingTop: 8, borderTop: '1px solid var(--border)' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <i className="ti ti-brain" style={{ fontSize: 10, color: 'var(--green)' }} />
+                    <span style={{ fontSize: 10, color: 'var(--text3)' }}>Zgodne z AI</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <i className="ti ti-arrows-exchange" style={{ fontSize: 10, color: 'var(--orange)' }} />
+                    <span style={{ fontSize: 10, color: 'var(--text3)' }}>Zmienione przez Ciebie</span>
+                  </div>
+                </div>
+              )}
             </div>
 
-            <div className="stat-row">
-              <div className="stat-c">
-                <div className="sv green">{totalProtein}g</div>
-                <div className="sl">Białko / cel 75g</div>
-              </div>
-              <div className="stat-c">
-                <div className="sv">{totalKcal}</div>
-                <div className="sl">kcal łącznie</div>
-              </div>
-            </div>
-
-            <p
-              style={{
-                textAlign: "center",
-                fontSize: 11,
-                color: "var(--text3)",
-                marginTop: 4,
-              }}
-            >
+            <p style={{ textAlign: 'center', fontSize: 11, color: 'var(--text3)', marginBottom: 8 }}>
               Brak wyboru = automat o 20:00
             </p>
           </>
         )}
       </div>
+
+      {/* Sticky przycisk */}
+      {!loading && (
+        <div style={{ flexShrink: 0, padding: '8px 16px', background: 'var(--bg)', borderTop: '1px solid var(--border)' }}>
+          <button className="orange-btn" style={{ margin: 0, fontSize: 14, fontWeight: 700, padding: '13px' }} onClick={handlePlaceOrder}>
+            {editMode ? 'Zapisz zmiany' : 'Złóż zamówienie'}
+          </button>
+        </div>
+      )}
+
+      {detailMeal && (
+        <MealDetailModal meal={detailMeal.meal} optionIdx={detailMeal.optionIdx} onClose={() => setDetailMeal(null)} />
+      )}
 
       <Navbar active="order" navigate={navigate} />
     </div>

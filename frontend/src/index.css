@@ -1680,7 +1680,7 @@ ion-app {
 
 /* ── Symptom Modal (bottom sheet) ─────────────────────────── */
 .modal-backdrop {
-  position: fixed;
+  position: absolute;
   inset: 0;
   background: rgba(0, 0, 0, 0.45);
   z-index: 100;
@@ -1688,12 +1688,10 @@ ion-app {
 }
 
 .modal-sheet {
-  position: fixed;
+  position: absolute;
   bottom: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 390px;
-  max-width: 100%;
+  left: 0;
+  right: 0;
   background: var(--card);
   border-radius: 22px 22px 0 0;
   padding: 10px 20px 32px;
@@ -1733,11 +1731,11 @@ ion-app {
 
 @keyframes slideUp {
   from {
-    transform: translateX(-50%) translateY(100%);
+    transform: translateY(100%);
     opacity: 0;
   }
   to {
-    transform: translateX(-50%) translateY(0);
+    transform: translateY(0);
     opacity: 1;
   }
 }
@@ -1768,9 +1766,14 @@ ion-app {
   border: 1.5px solid var(--meal-border-light);
   border-radius: var(--meal-radius-xl);
   padding: 14px;
-  margin-bottom: var(--meal-gap-md);
+  margin-bottom: 0;
   box-shadow: var(--meal-shadow-card);
   transition: all 0.25s ease;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.85); }
 }
 
 .meal-card--animating {
@@ -2141,13 +2144,13 @@ ion-app {
 /* ── Plan Screen Timeline ──────────────────────────── */
 .tl-wrap {
   position: relative;
-  padding-left: 56px;
+  padding-left: 52px;
 }
 
 .tl-wrap::before {
   content: '';
   position: absolute;
-  left: 46px;
+  left: 40px;
   top: 14px;
   bottom: 14px;
   width: 2px;
@@ -2168,8 +2171,8 @@ ion-app {
 
 .tl-time {
   position: absolute;
-  left: -56px;
-  width: 40px;
+  left: -52px;
+  width: 36px;
   text-align: right;
   font-size: 10px;
   font-weight: 600;
@@ -2180,7 +2183,7 @@ ion-app {
 
 .tl-dot {
   position: absolute;
-  left: -15px;
+  left: -16px;
   top: 9px;
   width: 10px;
   height: 10px;

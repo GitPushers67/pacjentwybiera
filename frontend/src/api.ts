@@ -1,6 +1,8 @@
 import type { EatenStatus, Meal, MealOption, PatientProfile, SymptomHistoryEntry } from './types';
 
-const API_BASE = 'https://pacjentwybiera.pl/wp-json/mobilnycatering/v1/menu-schedules';
+const API_BASE = import.meta.env.DEV
+  ? '/wp-json/mobilnycatering/v1/menu-schedules'
+  : 'https://pacjentwybiera.pl/wp-json/mobilnycatering/v1/menu-schedules';
 const PATIENTS_STORAGE_KEY = 'pacjentwybiera:patients';
 
 const SLOT_META: Record<number, { id: string; icon: string; time: string; timeHour: number }> = {
@@ -67,11 +69,14 @@ export async function fetchMenuForDateCached(dateStr: string): Promise<Meal[] | 
 }
 
 export async function fetchMenuForDate(dateStr: string): Promise<Meal[] | null> {
-  const url = new URL(API_BASE);
+  const url = new URL(
+    API_BASE,
+    typeof window !== 'undefined' ? window.location.origin : 'https://pacjentwybiera.pl',
+  );
   url.searchParams.set('dietId',                '2388');
   url.searchParams.set('dietVariantId',         '4881');
   url.searchParams.set('dietVariantCaloriesId', '18414');
-  url.searchParams.set('menuScheduleId',        '7354');
+  url.searchParams.set('menuScheduleId',        '7392');
   url.searchParams.set('menuDateAsString',      dateStr);
 
   try {

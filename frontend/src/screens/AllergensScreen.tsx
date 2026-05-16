@@ -22,8 +22,8 @@ export default function AllergensScreen({ navigate, allergens, setAllergens }: P
     <div className="screen active">
       <div className="topbar">
         <div>
-          <h1>Alergeny i wykluczenia</h1>
-          <p>Zaznacz produkty, których unikasz</p>
+          <h1>Alergeny</h1>
+          <p>Zaznacz alergeny, których unikasz</p>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
           <TopbarDate />

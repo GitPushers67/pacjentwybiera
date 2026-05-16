@@ -11,6 +11,7 @@ interface Props {
   setSymptoms: (s: string[]) => void;
   symptomHistory: SymptomHistoryEntry[];
   setSymptomHistory: Dispatch<SetStateAction<SymptomHistoryEntry[]>>;
+  streak?: number;
 }
 
 function scaleLbl(v: number) {
@@ -20,15 +21,16 @@ function scaleLbl(v: number) {
 }
 
 const ALL_SYMPTOMS = [
-  { key: "nausea", icon: "ti-mood-sick", label: "Nudności" },
-  { key: "diarrhea", icon: "ti-ripple", label: "Biegunka" },
-  { key: "const", icon: "ti-alert-circle", label: "Zaparcia" },
-  { key: "mouth", icon: "ti-bandage", label: "Ból jamy ustnej" },
-  { key: "taste", icon: "ti-eye-off", label: "Brak smaku" },
-  { key: "metal", icon: "ti-thermometer", label: "Metaliczny posmak" },
-  { key: "fatigue", icon: "ti-zzz", label: "Zmęczenie" },
-  { key: "appetite", icon: "ti-bowl", label: "Brak apetytu" },
-  { key: "dryness", icon: "ti-droplets", label: "Suchość w ustach" },
+  { key: "nausea",       icon: "ti-mood-sick",   label: "Nudności" },
+  { key: "diarrhea",     icon: "ti-ripple",       label: "Biegunka" },
+  { key: "const",        icon: "ti-alert-circle", label: "Zaparcia" },
+  { key: "mouth",        icon: "ti-bandage",      label: "Pieczenie w jamie ustnej" },
+  { key: "taste",        icon: "ti-eye-off",      label: "Brak smaku" },
+  { key: "taste_change", icon: "ti-sparkles",    label: "Zmiana smaku" },
+  { key: "metal",        icon: "ti-thermometer",  label: "Metaliczny posmak" },
+  { key: "fatigue",      icon: "ti-zzz",          label: "Zmęczenie" },
+  { key: "appetite",     icon: "ti-bowl",         label: "Brak apetytu" },
+  { key: "dryness",      icon: "ti-droplets",     label: "Suchość w ustach" },
 ];
 
 export default function AddSymScreen({
@@ -37,6 +39,7 @@ export default function AddSymScreen({
   setSymptoms,
   symptomHistory,
   setSymptomHistory,
+  streak,
 }: Props) {
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -130,23 +133,7 @@ export default function AddSymScreen({
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 6 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <TopbarDate />
-            <button
-              onClick={() => navigate('profile')}
-              style={{
-                background: 'var(--border)',
-                border: 'none',
-                borderRadius: '50%',
-                width: 36,
-                height: 36,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                cursor: 'pointer',
-              }}
-            >
-              <i className="ti ti-user" style={{ fontSize: 18, color: 'var(--text2)' }} />
-            </button>
+            <TopbarDate navigate={navigate} />
           </div>
           <button
             style={{ background: "none", border: "none", cursor: "pointer", padding: 0 }}
@@ -403,7 +390,7 @@ export default function AddSymScreen({
                 type="text"
                 value={customName}
                 onChange={(e) => setCustomName(e.target.value)}
-                placeholder="Np. Ból pleców, Duszność, Obrzęk..."
+                placeholder=""
                 autoFocus
                 style={{
                   width: "100%",
