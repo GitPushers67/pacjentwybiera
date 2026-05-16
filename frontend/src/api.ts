@@ -76,7 +76,7 @@ export async function fetchMenuForDate(dateStr: string): Promise<Meal[] | null> 
   url.searchParams.set('dietId',                '2388');
   url.searchParams.set('dietVariantId',         '4881');
   url.searchParams.set('dietVariantCaloriesId', '18414');
-  url.searchParams.set('menuScheduleId',        '7354');
+  url.searchParams.set('menuScheduleId',        '7392');
   url.searchParams.set('menuDateAsString',      dateStr);
 
   try {
