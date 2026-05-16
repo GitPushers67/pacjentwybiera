@@ -51,7 +51,6 @@ function MealSlot({ meal, selectedIdx, onSelect, aiIdx, aiReason, onShowDetail }
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setCurrentView(selectedIdx); setFlipped(false); }, [selectedIdx]);
 
-  const opt = getOption(meal, currentView);
   const isAiRec = aiIdx !== undefined && currentView === aiIdx;
   const isAiAlt = aiIdx !== undefined && currentView !== aiIdx;
   const totalOpts = meal.options.length;

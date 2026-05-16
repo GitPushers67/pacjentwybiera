@@ -74,8 +74,8 @@ export default function HomeScreen({
   eatenMap,
   setEatenMap,
   choices,
-  favorites,
-  onToggleFavorite,
+  favorites: _favorites,
+  onToggleFavorite: _onToggleFavorite,
   onNotEatenReason,
 }: Props) {
   const [apiMeals, setApiMeals] = useState<Meal[] | null>(null);
@@ -94,7 +94,6 @@ export default function HomeScreen({
   const swipeDidDragRef = useRef<Record<string, boolean>>({});
 
   const today = useMemo(() => getToday(), []);
-  const nowHour = new Date().getHours() + new Date().getMinutes() / 60;
 
   useEffect(() => {
     const dateStr = formatDateForAPI(today);
@@ -164,9 +163,6 @@ export default function HomeScreen({
     const opt = meal.options[choices[meal.id] ?? 0] ?? meal.options[0];
     const isPending = state.status === 'pending';
     const isCurrent = meal.id === currentMealId;
-    const mealHour = MEAL_HOURS[meal.id] ?? 12;
-    const isPast = mealHour < nowHour - 0.5 && !isCurrent;
-
     const alt = selectedAlternatives[meal.id] ?? null;
     const side = cardSide[meal.id] ?? 0;
     const altState = altStates[meal.id] ?? { status: 'pending', partialPct: 50, showPlate: false };
