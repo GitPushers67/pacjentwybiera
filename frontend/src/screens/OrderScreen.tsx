@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useState, useRef, useCallback, useEffect, useMemo, useLayoutEffect } from "react";
 import Navbar from "../components/Navbar";
 import type { Screen, Meal, PatientProfile, SymptomHistoryEntry, EatenStatus } from "../types";
 import { meals as fallbackMeals } from "../data";
@@ -35,7 +35,10 @@ interface SlotProps {
 function MealSlot({ meal, selectedIdx, onSelect, aiIdx, aiReason, onShowDetail }: SlotProps) {
   const [currentView, setCurrentView] = useState(selectedIdx);
   const [flipped, setFlipped] = useState(false);
+  const [cardHeight, setCardHeight] = useState<number | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const frontRef = useRef<HTMLDivElement>(null);
+  const backRef = useRef<HTMLDivElement>(null);
   const startX = useRef(0);
   const dx = useRef(0);
   const dragging = useRef(false);
@@ -49,6 +52,26 @@ function MealSlot({ meal, selectedIdx, onSelect, aiIdx, aiReason, onShowDetail }
   const isAiRec = aiIdx !== undefined && currentView === aiIdx;
   const isAiAlt = aiIdx !== undefined && currentView !== aiIdx;
   const totalOpts = meal.options.length;
+
+  const syncCardHeight = useCallback(() => {
+    const frontHeight = frontRef.current?.offsetHeight ?? 0;
+    const backHeight = backRef.current?.offsetHeight ?? 0;
+    const nextHeight = flipped ? Math.max(frontHeight, backHeight) : frontHeight;
+    if (nextHeight > 0) setCardHeight((prev) => (prev === nextHeight ? prev : nextHeight));
+  }, [flipped]);
+
+  useLayoutEffect(() => {
+    syncCardHeight();
+  }, [syncCardHeight, currentView, aiReason, aiIdx]);
+
+  useEffect(() => {
+    if (typeof ResizeObserver === 'undefined') return;
+    if (!frontRef.current || !backRef.current) return;
+    const observer = new ResizeObserver(() => syncCardHeight());
+    observer.observe(frontRef.current);
+    observer.observe(backRef.current);
+    return () => observer.disconnect();
+  }, [syncCardHeight]);
 
   const swipeTo = useCallback((idx: number) => {
     const clamped = Math.max(0, Math.min(totalOpts - 1, idx));
@@ -98,8 +121,8 @@ function MealSlot({ meal, selectedIdx, onSelect, aiIdx, aiReason, onShowDetail }
   };
 
   const cardBg = '#fff';
-  const cardBorder = isAiRec ? '1px solid var(--gmid)' :
-                     isAiAlt ? '1px solid var(--omid)' : '1px solid var(--border)';
+  const cardBorderColor = isAiRec ? 'var(--gmid)' :
+                          isAiAlt ? 'var(--omid)' : 'var(--border)';
 
   return (
     <div style={{ background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 16, marginBottom: 8, overflow: 'hidden' }}>
@@ -131,11 +154,12 @@ function MealSlot({ meal, selectedIdx, onSelect, aiIdx, aiReason, onShowDetail }
       </div>
 
       {/* Flip card */}
-      <div style={{ perspective: '1000px' }}>
+      <div style={{ perspective: '1000px', height: cardHeight ?? undefined, transition: 'height 0.22s ease' }}>
         <div
           ref={cardRef}
           style={{
             position: 'relative',
+            height: '100%',
             transformStyle: 'preserve-3d',
             transition: 'transform 0.45s cubic-bezier(0.4,0,0.2,1)',
             transform: flipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
@@ -147,15 +171,19 @@ function MealSlot({ meal, selectedIdx, onSelect, aiIdx, aiReason, onShowDetail }
           onPointerCancel={onPointerUp}
         >
           {/* PRZÓD */}
-          <div style={{
+          <div
+            ref={frontRef}
+            style={{
             backfaceVisibility: 'hidden',
             WebkitBackfaceVisibility: 'hidden',
             padding: '12px 14px',
             background: cardBg,
-            border: cardBorder,
-            borderTop: 'none',
+            borderStyle: 'solid',
+            borderColor: cardBorderColor,
+            borderWidth: '0 1px 1px 1px',
             borderRadius: '0 0 16px 16px',
-          }}>
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text)', lineHeight: 1.35, marginBottom: 6 }}>{opt.name}</div>
@@ -191,18 +219,22 @@ function MealSlot({ meal, selectedIdx, onSelect, aiIdx, aiReason, onShowDetail }
           </div>
 
           {/* TYŁ — uzasadnienie AI, auto-height */}
-          <div style={{
+          <div
+            ref={backRef}
+            style={{
             position: 'absolute', top: 0, left: 0, right: 0,
             backfaceVisibility: 'hidden',
             WebkitBackfaceVisibility: 'hidden',
             transform: 'rotateY(180deg)',
             padding: '14px',
             background: '#fff',
-            border: isAiRec ? '1px solid var(--gmid)' : '1px solid var(--omid)',
-            borderTop: 'none',
+            borderStyle: 'solid',
+            borderColor: isAiRec ? 'var(--gmid)' : 'var(--omid)',
+            borderWidth: '0 1px 1px 1px',
             borderRadius: '0 0 16px 16px',
             minHeight: '100%',
-          }}>
+            }}
+          >
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10 }}>
               <i className="ti ti-brain" style={{ fontSize: 13, color: isAiRec ? 'var(--green)' : 'var(--orange)' }} />
               <span style={{ fontSize: 10, fontWeight: 700, color: isAiRec ? 'var(--green)' : 'var(--orange)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
