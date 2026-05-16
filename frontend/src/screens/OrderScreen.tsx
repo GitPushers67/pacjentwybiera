@@ -46,6 +46,7 @@ function MealSlot({ meal, selectedIdx, onSelect, aiIdx, aiReason, onShowDetail }
   const startY = useRef(0);
   const didDrag = useRef(false);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setCurrentView(selectedIdx); setFlipped(false); }, [selectedIdx]);
 
   const opt = getOption(meal, currentView);
@@ -275,7 +276,7 @@ export default function OrderScreen({
   const [isAiLoading, setIsAiLoading] = useState(false);
   const [aiReasons, setAiReasons] = useState<Record<string, string>>({});
   const [aiChoices, setAiChoices] = useState<Record<string, number>>({});
-  const [globalAiReason, setGlobalAiReason] = useState<string | null>(null);
+  const [, setGlobalAiReason] = useState<string | null>(null);
   const [detailMeal, setDetailMeal] = useState<{ meal: Meal; optionIdx: number } | null>(null);
 
   const orderDate = useMemo(() => getOrderableDate(), []);

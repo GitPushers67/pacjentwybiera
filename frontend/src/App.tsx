@@ -62,7 +62,6 @@ export default function App() {
   const [authChecked, setAuthChecked] = useState(DEV_MODE);
   const [favorites, setFavorites] = useState<string[]>([]);
   const [streak] = useState(7); // mock — w produkcji liczyć z bazy
-  const [daysTracked] = useState(9); // mock — w produkcji liczyć z bazy
   // Gdy pacjent wybierze "złe samopoczucie" → navigate do objawów → wróć z otwartym panelem alternatywy
   const [pendingAlternativeMealId, setPendingAlternativeMealId] = useState<string | null>(null);
 

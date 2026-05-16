@@ -142,7 +142,7 @@ function apiMealsToPlanMeals(
   });
 }
 
-export default function PlanScreen({ navigate, choices, orderMeals, symptomHistory, streak }: Props) {
+export default function PlanScreen({ navigate, choices, orderMeals, symptomHistory }: Props) {
   const today = useMemo(() => getToday(), []);
 
   const [selectedOffset, setSelectedOffset] = useState(0);
@@ -311,9 +311,7 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
     return buildTimeline(day.meals, symptomHistory, selectedDate);
   }, [day.meals, selectedOffset, symptomHistory, selectedDate]);
 
-  const isHistory = selectedOffset < 0;
   const showTimeline = selectedOffset <= 0;
-  const totalKcal = day.meals.reduce((s, m) => s + m.kcal, 0);
   const isSelectedChemo = dayEntries.find((d) => d.offset === selectedOffset)?.isChemo ?? false;
 
   return (

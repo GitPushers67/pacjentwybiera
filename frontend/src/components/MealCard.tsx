@@ -18,7 +18,6 @@ interface MealCardProps {
   onReset: () => void;
   onToggleFavorite?: () => void;
   onNotEatenReason?: (reason: NotEatenReason) => void;
-  onNavigateToSymptoms?: () => void;
   showAlternativePanel?: boolean;
   onAlternativeHandled?: () => void;
 }
@@ -36,7 +35,6 @@ export function MealCard({
   onReset,
   onToggleFavorite,
   onNotEatenReason,
-  onNavigateToSymptoms,
 }: MealCardProps) {
   const [animating, setAnimating] = useState(false);
   const [showDetail, setShowDetail] = useState(false);
@@ -89,11 +87,6 @@ export function MealCard({
     onSetStatus('eaten_alternative' as MealCardState['status']);
     triggerAnim();
     setShowEatenFeedback(true);
-  };
-
-  const handleNavigateToSymptoms = () => {
-    setShowNotEatenFeedback(false);
-    onNavigateToSymptoms?.();
   };
 
   const statusLabel =
@@ -198,8 +191,7 @@ export function MealCard({
         <NotEatenFeedbackModal
           mealName={opt?.name || 'Posiłek'}
           onClose={handleNotEatenReason}
-          onAteAlternative={handleAteAlternative}
-          onNavigateToSymptoms={handleNavigateToSymptoms}
+          onSelectAlternative={(alt) => handleAteAlternative(alt.name)}
           onCancel={() => setShowNotEatenFeedback(false)}
         />
       )}
