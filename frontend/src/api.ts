@@ -69,7 +69,10 @@ export async function fetchMenuForDateCached(dateStr: string): Promise<Meal[] | 
 }
 
 export async function fetchMenuForDate(dateStr: string): Promise<Meal[] | null> {
-  const url = new URL(API_BASE);
+  const url = new URL(
+    API_BASE,
+    typeof window !== 'undefined' ? window.location.origin : 'https://pacjentwybiera.pl',
+  );
   url.searchParams.set('dietId',                '2388');
   url.searchParams.set('dietVariantId',         '4881');
   url.searchParams.set('dietVariantCaloriesId', '18414');
