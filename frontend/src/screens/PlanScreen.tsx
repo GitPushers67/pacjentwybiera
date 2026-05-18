@@ -7,6 +7,7 @@ import {
   getOption,
 } from '../utils';
 import { fetchMenuForDateCached } from '../api';
+import { pastMockDays, meals as fallbackMeals } from '../data';
 import TopbarDate from '../components/TopbarDate';
 import { getMealLogsRange, type MealLog } from '../services/mealLogs';
 
@@ -210,17 +211,23 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
       const apiMeals = fetchedMeals[selectedOffset];
       const dateStr = formatDateForAPI(selectedDate);
       const logsForDay = pastLogs[dateStr] ?? [];
+
+      const mapApiMeals = (src: NonNullable<typeof apiMeals>) =>
+        src.map((m) => {
+          const log = logsForDay.find((l) => l.meal_slot === m.title);
+          const opt = log ? (m.options[log.option_index] ?? m.options[0]) : m.options[0];
+          const { badge, bc } = log ? statusToBadge(log.status) : { badge: 'oczekuje', bc: 'o' as const };
+          return { emoji: opt.emoji, type: m.title, name: opt.name, kcal: opt.kcal, protein: opt.protein, carbs: opt.carbs, fat: opt.fat, badge, bc };
+        });
+
       return {
         label: PAST_LABELS[selectedOffset],
         sub: formatDateShortPL(selectedDate),
         meals: apiMeals
-          ? apiMeals.map((m) => {
-              const log = logsForDay.find((l) => l.meal_slot === m.title);
-              const opt = log ? (m.options[log.option_index] ?? m.options[0]) : m.options[0];
-              const { badge, bc } = log ? statusToBadge(log.status) : { badge: 'oczekuje', bc: 'o' as const };
-              return { emoji: opt.emoji, type: m.title, name: opt.name, kcal: opt.kcal, protein: opt.protein, carbs: opt.carbs, fat: opt.fat, badge, bc };
-            })
-          : [],
+          ? mapApiMeals(apiMeals)
+          : (selectedOffset in fetchedMeals)
+            ? (pastMockDays[selectedOffset + 3]?.meals ?? [])
+            : [],
       };
     }
 
@@ -228,6 +235,12 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
       const apiMeals = fetchedMeals[0];
       const dateStr = formatDateForAPI(selectedDate);
       const logsForDay = pastLogs[dateStr] ?? [];
+
+      const todayFallback = fallbackMeals.map((m) => {
+        const opt = m.options[0];
+        return { emoji: opt.emoji, type: m.title, name: opt.name, kcal: opt.kcal, protein: opt.protein, carbs: opt.carbs, fat: opt.fat, badge: 'oczekuje', bc: 'o' as const };
+      });
+
       return {
         label: 'Dzisiejsze menu',
         sub: formatDateShortPL(selectedDate),
@@ -238,7 +251,7 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
               const { badge, bc } = log ? statusToBadge(log.status) : { badge: 'oczekuje', bc: 'o' as const };
               return { emoji: opt.emoji, type: m.title, name: opt.name, kcal: opt.kcal, protein: opt.protein, carbs: opt.carbs, fat: opt.fat, badge, bc };
             })
-          : [],
+          : (0 in fetchedMeals ? todayFallback : []),
       };
     }
 
@@ -366,10 +379,16 @@ export default function PlanScreen({ navigate, choices, orderMeals, symptomHisto
         </div>
 
         {/* ── Loading state ──────────────────────────────── */}
-        {day.meals.length === 0 && (
+        {day.meals.length === 0 && !(selectedOffset in fetchedMeals) && (
           <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text3)', fontSize: 12 }}>
             <i className="ti ti-loader-2 cam-spin" style={{ fontSize: 22, display: 'block', margin: '0 auto 8px' }} />
             Ładowanie menu…
+          </div>
+        )}
+        {day.meals.length === 0 && (selectedOffset in fetchedMeals) && (
+          <div style={{ textAlign: 'center', padding: '20px 0', color: 'var(--text3)', fontSize: 12 }}>
+            <i className="ti ti-calendar-off" style={{ fontSize: 22, display: 'block', margin: '0 auto 8px' }} />
+            Brak menu dla tego dnia
           </div>
         )}
 

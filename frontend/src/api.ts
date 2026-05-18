@@ -39,7 +39,19 @@ async function fetchScheduleList(): Promise<RawMenuSchedule[]> {
 }
 
 function findScheduleIdForDate(schedules: RawMenuSchedule[], dateStr: string): number | null {
-  return schedules.find(s => s.menuDatesAsString.includes(dateStr))?.menuScheduleId ?? null;
+  const exact = schedules.find(s => s.menuDatesAsString.includes(dateStr));
+  if (exact) return exact.menuScheduleId;
+
+  // No exact match — pick the schedule whose date is closest to dateStr
+  const target = new Date(dateStr).getTime();
+  let best: { id: number; dist: number } | null = null;
+  for (const s of schedules) {
+    for (const d of s.menuDatesAsString) {
+      const dist = Math.abs(new Date(d).getTime() - target);
+      if (!best || dist < best.dist) best = { id: s.menuScheduleId, dist };
+    }
+  }
+  return best?.id ?? null;
 }
 
 const SLOT_META: Record<number, { id: string; icon: string; time: string; timeHour: number }> = {

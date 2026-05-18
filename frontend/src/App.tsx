@@ -22,6 +22,7 @@ import NutritionScreen from "./screens/NutritionScreen";
 import ChatScreen from "./screens/ChatScreen";
 import OnboardingScreen from "./screens/OnboardingScreen";
 import LoginScreen from "./screens/LoginScreen";
+import LandingScreen from "./screens/LandingScreen";
 
 // DEV_MODE = true  → pomija auth + onboarding, startuje na home z mock-pacjentem
 // DEV_MODE = false → pełny flow: login → onboarding → welcome → home
@@ -39,6 +40,18 @@ const DEV_PATIENT: PatientProfile = {
   allergens: [],
 };
 
+const GUEST_PATIENT: PatientProfile = {
+  firstName: "Gość",
+  lastName: "",
+  sex: "male",
+  birthYear: 1975,
+  weightKg: 70,
+  heightCm: 170,
+  cancerType: "Rak płuca",
+  treatmentType: "chemo",
+  allergens: [],
+};
+
 function sevenDaysAgo(): string {
   const d = new Date();
   d.setDate(d.getDate() - 7);
@@ -48,8 +61,10 @@ function sevenDaysAgo(): string {
 
 export default function App() {
   const [screen, setScreen] = useState<Screen>(
-    DEV_MODE ? "home" : "login",
+    DEV_MODE ? "home" : "landing",
   );
+  const [isGuest, setIsGuest] = useState(false);
+  const [guestId, setGuestId] = useState<string | null>(null);
   const [patient, setPatient] = useState<PatientProfile | null>(
     DEV_MODE ? DEV_PATIENT : null,
   );
@@ -82,14 +97,16 @@ export default function App() {
       if (session) {
         loadUserData();
       } else {
-        setScreen("login");
+        setScreen("landing");
         setAuthChecked(true);
       }
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
-        setScreen("login");
+        setIsGuest(false);
+        setGuestId(null);
+        setScreen("landing");
         setPatient(null);
         setSymptomHistory([]);
         setSymptoms([]);
@@ -98,6 +115,21 @@ export default function App() {
 
     return () => subscription.unsubscribe();
   }, []);
+
+  useEffect(() => {
+    if (!isGuest || !guestId) return;
+    localStorage.setItem(`guest_${guestId}_symptoms`, JSON.stringify(symptoms));
+  }, [isGuest, guestId, symptoms]);
+
+  useEffect(() => {
+    if (!isGuest || !guestId) return;
+    localStorage.setItem(`guest_${guestId}_choices`, JSON.stringify(choices));
+  }, [isGuest, guestId, choices]);
+
+  useEffect(() => {
+    if (!isGuest || !guestId) return;
+    localStorage.setItem(`guest_${guestId}_eatenMap`, JSON.stringify(eatenMap));
+  }, [isGuest, guestId, eatenMap]);
 
   async function loadUserData() {
     const [profile, entries] = await Promise.all([
@@ -138,6 +170,40 @@ export default function App() {
     setPatient(p);
   };
 
+  const handleGuest = () => {
+    let id = localStorage.getItem('guest_session_id');
+    if (!id) {
+      id = crypto.randomUUID();
+      localStorage.setItem('guest_session_id', id);
+    }
+
+    const storedPatient = localStorage.getItem(`guest_${id}_patient`);
+    const guestPatient: PatientProfile = storedPatient
+      ? JSON.parse(storedPatient)
+      : GUEST_PATIENT;
+    if (!storedPatient) {
+      localStorage.setItem(`guest_${id}_patient`, JSON.stringify(GUEST_PATIENT));
+    }
+
+    const storedSymptoms = localStorage.getItem(`guest_${id}_symptoms`);
+    const guestSymptoms: string[] = storedSymptoms ? JSON.parse(storedSymptoms) : [];
+
+    const storedChoices = localStorage.getItem(`guest_${id}_choices`);
+    const guestChoices: Record<string, number> = storedChoices ? JSON.parse(storedChoices) : {};
+
+    const storedEaten = localStorage.getItem(`guest_${id}_eatenMap`);
+    const guestEaten: Record<string, EatenStatus> = storedEaten ? JSON.parse(storedEaten) : {};
+
+    setIsGuest(true);
+    setGuestId(id);
+    setPatient(guestPatient);
+    setSymptoms(guestSymptoms);
+    setChoices(guestChoices);
+    setEatenMap(guestEaten);
+    setAuthChecked(true);
+    setScreen('home');
+  };
+
   const handleLogin = () => {
     loadUserData();
   };
@@ -162,6 +228,9 @@ export default function App() {
     <IonApp>
       <div className="app-wrap">
         <div className="phone">
+          {screen === "landing" && (
+            <LandingScreen onGuest={handleGuest} onLogin={() => setScreen("login")} />
+          )}
           {screen === "login" && (
             <LoginScreen onLogin={handleLogin} />
           )}
