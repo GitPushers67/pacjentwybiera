@@ -237,7 +237,7 @@ Dopasuj klucze w choices do id posiłków z danych wejściowych.`;
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${apiKey}`,
+        'Authorization': `Bearer ${apiKey.trim()}`,
       },
       body: JSON.stringify({
         model: 'llama-3.1-70b-versatile',
@@ -248,7 +248,11 @@ Dopasuj klucze w choices do id posiłków z danych wejściowych.`;
         response_format: { type: 'json_object' },
       }),
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('Groq API Error details:', res.status, errorText);
+      return null;
+    }
     const data = await res.json();
     return JSON.parse(data.choices[0].message.content);
   } catch {
