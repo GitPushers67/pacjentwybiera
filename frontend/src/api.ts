@@ -240,7 +240,7 @@ Dopasuj klucze w choices do id posiłków z danych wejściowych.`;
         'Authorization': `Bearer ${apiKey}`,
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model: 'llama-3.1-70b-versatile',
         messages: [
           { role: 'system', content: 'Jesteś asystentem zwracającym odpowiedzi tylko w formacie JSON.' },
           { role: 'user', content: prompt },
