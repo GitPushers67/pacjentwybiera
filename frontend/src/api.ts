@@ -240,7 +240,7 @@ Dopasuj klucze w choices do id posiłków z danych wejściowych.`;
         'Authorization': `Bearer ${apiKey.trim()}`,
       },
       body: JSON.stringify({
-        model: 'llama3-70b-8192',
+        model: 'openai/gpt-oss-120b',
         messages: [
           { role: 'system', content: 'Jesteś asystentem zwracającym odpowiedzi tylko w formacie JSON.' },
           { role: 'user', content: prompt },
